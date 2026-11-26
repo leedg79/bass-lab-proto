@@ -1,4 +1,5 @@
-// Rhythm(베이스) 연습 화면: 박자·템포 유지(R1), 리듬 패턴(R2), 드럼과 맞추기(R3)
+// 박자 유지(기본 리듬 세트)·장르별 그루브 연습 화면
+// 클릭 방식(매 박 → 2·4박만 → 1박만 → 2마디에 한 번 → 무음 마디)으로 템포 유지까지 같이 연습
 // 두 방식
 // - 판정: 클릭(또는 드럼) 4번 뒤 연주 → 마이크로 내가 친 소리의 시작점(어택)을 잡아 박과 비교 → 통과하면 BPM을 올리는 템포 사다리
 // - 판정 없이: 클릭·드럼(시범 베이스 소리 선택)에 맞춰 정한 길이를 끝까지 같이 치기
@@ -26,33 +27,34 @@ const sgn = v => (v == null ? "-" : `${v > 0 ? "+" : ""}${Math.round(v)}ms`);
 export function makeGrooveTask(kind) {
   const store = makeStore(`basslab:groove-${kind}`);
   const P = `gv${kind}`;
-  const RUNS = kind === "time" ? [["8", "8마디"], ["16", "16마디"]] : [["4", "4마디"], ["8", "8마디"]];
-  const defRun = kind === "time" ? 8 : 4;
+  const RUNS = [["4", "4마디"], ["8", "8마디"], ["16", "16마디"]];
+  const defRun = 8;
+  const CLICKS = G.modesFor(kind).map(id => [id, kind === "lock" ? (id === "beat" ? "드럼 계속" : G.CLICK_MODES[id].name.replace("무음", "드럼 없이")) : G.CLICK_MODES[id].name]);
 
   function settingsHtml() {
     return `
       <div class="field"><label>연습 방식</label>${segHtml(`${P}Mode`, MODES, getSetting("groove.mode", "judge"))}
         <p class="muted small" style="margin:6px 0 0">판정은 마이크(또는 NUX·iRig 같은 입력 장치)로 친 소리의 시작점을 잡아 박과 비교함. 판정 없이는 클릭·드럼에 맞춰 끝까지 같이 치기만 함. 세션 중에도 바꿀 수 있음</p></div>
-      ${kind === "time" ? `<div class="field" style="margin-top:14px"><label>내가 칠 음표</label>${segHtml(`${P}Note`, [["q", "4분음표"], ["e", "8분음표"]], getSetting("groove.note", "q"))}
-        <p class="muted small" style="margin:6px 0 0">개방 A(3번 줄)를 계속 침. "박 쪼개기 바꾸기"는 마디마다 4분 → 8분 → 셋잇단 → 16분으로 바뀜</p></div>` : ""}
+      <div class="field" style="margin-top:14px"><label>${kind === "lock" ? "드럼 방식" : "클릭 방식"}</label>${segHtml(`${P}Click`, CLICKS, getSetting(`groove.click.${kind}`, "beat"))}
+        <p class="muted small" style="margin:6px 0 0">${kind === "lock" ? "드럼이 마디째 빠지는 동안 같은 템포로 이어 치기. 세션 중에도 바꿀 수 있음" : "클릭을 점점 줄여 템포를 내가 유지하게 함. 세션 중에도 바꿀 수 있음"}</p></div>
       <div class="field" style="margin-top:14px"><label>시작 BPM</label>${segHtml(`${P}Start`, [["rec", "권장 시작 BPM"], ["best", "내 최고 기록부터"]], getSetting("groove.start", "rec"))}</div>
       <div class="field" style="margin-top:14px"><label>통과할 때마다 올릴 BPM</label>${segHtml(`${P}Step`, STEPS, String(getSetting("groove.step", 4)))}</div>
       <div class="field" style="margin-top:14px"><label>한 번 칠 길이</label>${segHtml(`${P}Run`, RUNS, String(getSetting(`groove.run.${kind}`, defRun)))}</div>
-      ${kind === "time" ? "" : `<div class="field" style="margin-top:14px"><label>순서</label>${segHtml(`${P}Order`, [["seq", "순서대로"], ["rand", "무작위"]], getSetting("groove.order", "seq"))}</div>`}
+      <div class="field" style="margin-top:14px"><label>순서</label>${segHtml(`${P}Order`, [["seq", "쉬운 것부터"], ["rand", "무작위"]], getSetting("groove.order", "seq"))}</div>
       <p class="muted small" style="margin:4px 0 0">판정 통과 또는 판정 없이 끝까지 1번 = 통과 1회, ${PASSES_PER_UNIT}회 = 완료 1회. 판정은 이어폰을 끼면 클릭이 마이크에 섞이지 않아 정확함. 처음 한 번 "박자 보정"으로 기기 지연을 빼 둠</p>`;
   }
-  const ids = [`${P}Mode`, `${P}Note`, `${P}Start`, `${P}Step`, `${P}Run`, `${P}Order`];
+  const ids = [`${P}Mode`, `${P}Click`, `${P}Start`, `${P}Step`, `${P}Run`, `${P}Order`];
   function bindSettings(root) { ids.forEach(id => bindPicker(root, id)); }
   function readSettings(root) {
     const o = {
       mode: readSel(root, `${P}Mode`, "v") || "judge",
-      note: readSel(root, `${P}Note`, "v") || "q",
+      click: readSel(root, `${P}Click`, "v") || "beat",
       start: readSel(root, `${P}Start`, "v") || "rec",
       step: Number(readSel(root, `${P}Step`, "v") || 4),
       run: Number(readSel(root, `${P}Run`, "v") || defRun),
       order: readSel(root, `${P}Order`, "v") || "seq"
     };
-    setSetting("groove.mode", o.mode); setSetting("groove.note", o.note); setSetting("groove.start", o.start);
+    setSetting("groove.mode", o.mode); setSetting(`groove.click.${kind}`, o.click); setSetting("groove.start", o.start);
     setSetting("groove.step", o.step); setSetting(`groove.run.${kind}`, o.run); setSetting("groove.order", o.order);
     return o;
   }
@@ -61,20 +63,15 @@ export function makeGrooveTask(kind) {
     const s0 = api.getActive();
     const o = s0.options || {};
     const runBars = o.run || defRun;
-    // 연습할 목록: R1은 고른 모드, R2·R3는 고른 주제의 패턴
-    let list;
-    if (kind === "time") {
-      const modes = (s0.topics || []).filter(t => G.TIME_MODES[t]);
-      list = (modes.length ? modes : Object.keys(G.TIME_MODES)).map(m => G.timeDrill(m, { note: o.note || "q", bars: runBars }));
-    } else {
-      list = G.drillsFor(kind === "lock" ? "lock" : "pattern", s0.topics);
-      if (o.order === "rand") for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
-    }
+    // 연습할 목록: 이 레벨에서 고른 주제의 패턴(쉬운 것부터)
+    const list = G.drillsFor(kind, s0.level, s0.topics);
+    if (o.order === "rand") for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
     const order = list.map(x => x.id);
     const byId = id => list.find(x => x.id === id) || list[0];
     const bestAll = () => getSetting("groove.best", {}) || {};
-    const startBpm = x => (o.start === "best" && bestAll()[x.id] ? bestAll()[x.id] : x.bpm.start);
-    let st = store.load(s0.id) || { order, n: 0, passes: 0, units: 0, lad: {}, last: null, mode: o.mode || "judge", demo: true };
+    const startBpm = x => { const b = bestAll()[`${x.id}|${st ? st.click : "beat"}`]; return o.start === "best" && b ? b : x.bpm.start; };
+    let st = store.load(s0.id) || { order, n: 0, passes: 0, units: 0, lad: {}, last: null, mode: o.mode || "judge", demo: true, click: o.click || "beat" };
+    if (!G.modesFor(kind).includes(st.click)) st.click = "beat";
     if (!st.order || st.order.some(id => !list.some(x => x.id === id))) st = { ...st, order, n: 0 };
     const persist = () => store.save(s0.id, st);
     let x, busy = false, stopFns = [];
@@ -88,6 +85,7 @@ export function makeGrooveTask(kind) {
         <p class="small rh-tip" id="gvTip"></p>
         <div class="tq-bpm"><div><b id="gvBpm">-</b><span>BPM</span></div><small id="gvBest" class="muted"></small></div>
         <div class="seg wide-seg" id="gvModeLive">${MODES.map(([v, n]) => `<button type="button" data-v="${v}" class="${v === st.mode ? "sel" : ""}">${n}</button>`).join("")}</div>
+        <div class="field" style="margin-top:8px"><label>${kind === "lock" ? "드럼 방식" : "클릭 방식"} (바로 바뀜)</label><div class="seg wide-seg" id="gvClickLive">${CLICKS.map(([v, n]) => `<button type="button" data-v="${v}" class="${v === st.click ? "sel" : ""}">${esc(n)}</button>`).join("")}</div></div>
         <label class="tq-mon" id="gvDemoWrap"><input type="checkbox" id="gvDemo" ${st.demo ? "checked" : ""}> 시범 베이스 소리 같이 듣기</label>
         <div id="gvMicBox">
           <div class="tq-mic"><span id="gvMicState" class="muted small">마이크 꺼짐</span><span class="tq-meter"><i id="gvMeter"></i></span><button class="btn small" id="gvCal" type="button">박자 보정</button></div>
@@ -130,30 +128,30 @@ export function makeGrooveTask(kind) {
       </div>`;
     const $ = s => container.querySelector(s);
     const running = () => { const s = api.getActive(); return !!s && s.status === "running"; };
-    const lad = () => st.lad[x.id] || { bpm: startBpm(x), fails: 0, best: bestAll()[x.id] || 0 };
-    const loops = () => (kind === "time" ? 1 : Math.max(1, Math.round(runBars / x.bars)));
+    const key = () => `${x.id}|${st.click}`;
+    const lad = () => st.lad[key()] || { bpm: startBpm(x), fails: 0, best: bestAll()[key()] || 0 };
+    const plan = () => G.runPlan(x, runBars, st.click);
 
     function load() { x = byId(st.order[st.n % st.order.length]); }
 
-    // R1: 마디 × 박 칸에 클릭 자리 표시
+    // 클릭(또는 드럼) 지도: 마디 × 박, 무음 마디는 흐리게. 그루브는 드럼 칸 표도
     function drawMap() {
       const el = $("#gvMap");
-      if (kind !== "time") {
-        if (kind === "lock" && x.drums) {
-          const names = { k: "킥", s: "스네어", h: "하이햇", o: "오픈 햇", r: "라이드" };
-          el.innerHTML = `<div class="gv-drums">${Object.entries(x.drums).map(([k, v]) => `<div class="gv-drow"><small>${names[k]}</small><span>${[...v].map((c, i) => `<i class="${c === "." ? "" : c === "X" ? "on acc" : "on"} ${i % (x.feel === "shuffle" ? 2 : 4) === 0 ? "beat" : ""}"></i>`).join("")}</span></div>`).join("")}</div>`;
-        } else el.innerHTML = "";
-        return;
+      const pl = plan();
+      let drumHtml = "";
+      if (kind === "lock" && x.drums) {
+        const names = { k: "킥", s: "스네어", h: "하이햇", o: "오픈 햇", r: "라이드" };
+        drumHtml = `<div class="gv-drums">${Object.entries(x.drums).map(([k, v]) => `<div class="gv-drow"><small>${names[k]}</small><span>${[...v].map((c, i) => `<i class="${c === "." ? "" : c === "X" ? "on acc" : "on"} ${i % (x.feel === "shuffle" ? 2 : 4) === 0 ? "beat" : ""}"></i>`).join("")}</span></div>`).join("")}</div>`;
       }
-      const set = new Set(x.clicks.map(c => c.beat));
-      el.innerHTML = `<div class="gv-map">${Array.from({ length: x.bars }, (_, b) => {
-        const sec = x.sections.find(s => b >= s.from && b < s.to);
-        return `<div class="gv-bar ${sec && !sec.click ? "silent" : ""}"><small>${b + 1}</small>${[0, 1, 2, 3].map(k => `<i class="${set.has(b * 4 + k) ? "on" : ""}"></i>`).join("")}</div>`;
-      }).join("")}</div><p class="muted small" style="margin:4px 0 0">채운 칸 = 클릭이 나오는 박, 어두운 마디 = 클릭 없음. 나는 모든 박에서 ${x.mode === "subdiv" ? "마디마다 바뀌는 음표" : o.note === "e" ? "8분음표" : "4분음표"}를 침</p>`;
+      if (kind === "lock" && st.click === "beat") { el.innerHTML = drumHtml; return; }
+      const set = new Set(pl.clicks.map(c => c.beat));
+      el.innerHTML = drumHtml + `<div class="gv-map">${Array.from({ length: pl.bars }, (_, b) => {
+        const sec = pl.sections.find(sc => b >= sc.from && b < sc.to);
+        return `<div class="gv-bar ${sec && !sec.click ? "silent" : ""}"><small>${b + 1}</small>${[0, 1, 2, 3].map(k => `<i class="${kind === "lock" ? (sec && sec.click ? "on" : "") : set.has(b * 4 + k) ? "on" : ""}"></i>`).join("")}</div>`;
+      }).join("")}</div><p class="muted small" style="margin:4px 0 0">${kind === "lock" ? "채운 마디 = 드럼 나옴, 흐린 마디 = 드럼 없이 혼자 같은 템포로" : `채운 칸 = 클릭이 나오는 박, 흐린 마디 = 클릭 없음${st.click !== "beat" && G.CLICK_MODES[st.click].tip ? ` · ${G.CLICK_MODES[st.click].tip}` : ""}`}</p>`;
     }
     function drawScore(grades) {
       const el = $("#gvScore");
-      if (kind === "time") { el.innerHTML = ""; el.style.display = "none"; return; }
       if (!scoreSvg(el, x.events, { ticks: x.ticks })) { el.textContent = "악보를 그릴 수 없음"; return; }
       if (x.feel === "shuffle") el.insertAdjacentHTML("afterbegin", `<div class="muted small">Shuffle (♪♪ = ♩♪ 셋잇단)</div>`);
       if (grades) for (const [idx, g] of Object.entries(grades)) el.querySelectorAll(`[data-ev="${idx}"]`).forEach(n => n.classList.add(`j-${g}`));
@@ -163,11 +161,12 @@ export function makeGrooveTask(kind) {
       $("#gvNo").textContent = `${(st.n % st.order.length) + 1}/${st.order.length} · ${x.id}`;
       $("#gvProg").textContent = `통과 ${st.passes % PASSES_PER_UNIT}/${PASSES_PER_UNIT} · 완료 ${st.units}회`;
       $("#gvName").textContent = x.name;
-      const topicName = kind === "time" ? "박자·템포 유지" : kind === "lock" ? G.GROOVE_TOPICS[x.topic] : G.PATTERN_TOPICS[x.topic];
-      $("#gvTopic").textContent = `${topicName || ""} · ${kind === "time" ? `${x.bars}마디` : `${x.bars}마디 × ${loops()}번`} · 권장 ${x.bpm.start}→${x.bpm.target} BPM`;
+      const topicName = kind === "lock" ? G.GROOVE_TOPICS[x.topic] : G.PATTERN_TOPICS[x.topic];
+      const pl = plan();
+      $("#gvTopic").textContent = `${G.DIFFICULTY[x.lv]} · ${topicName || ""} · ${x.bars}마디 × ${pl.loops}번 = ${pl.bars}마디 · 권장 ${x.bpm.start}→${x.bpm.target} BPM`;
       $("#gvTip").textContent = x.tip;
       $("#gvBpm").textContent = L.bpm; $("#gvBpm2").textContent = L.bpm;
-      const best = Math.max(L.best || 0, bestAll()[x.id] || 0);
+      const best = Math.max(L.best || 0, bestAll()[key()] || 0);
       $("#gvBest").textContent = best ? `최고 통과 ${best} BPM${best >= x.bpm.target ? " · 목표 달성" : ` · 목표 ${x.bpm.target}`}` : `목표 ${x.bpm.target} BPM`;
       const judge = st.mode === "judge";
       $("#gvMicBox").classList.toggle("hidden", !judge);
@@ -187,7 +186,7 @@ export function makeGrooveTask(kind) {
       let time = "";
       if (r.time) {
         const tb = r.time.playedBpm;
-        const secs = r.time.sections.map(s => `<li>${s.from + 1}~${s.to}마디 · ${s.click ? (x.mode === "drop" || x.mode === "drop4" ? "클릭 있음" : esc(x.name)) : "클릭 없음"}: 평균 ${sgn(s.meanMs)}${s.driftMsPerBar != null && Math.abs(s.driftMsPerBar) >= 3 ? ` · 마디마다 ${Math.abs(Math.round(s.driftMsPerBar))}ms씩 ${s.driftMsPerBar < 0 ? "빨라짐" : "느려짐"}` : ""} (${s.hits}/${s.n})</li>`).join("");
+        const secs = r.time.sections.map(s => `<li>${s.from + 1}~${s.to}마디 · ${s.click ? (r.click === "drop" || r.click === "drop4" ? (kind === "lock" ? "드럼 있음" : "클릭 있음") : esc(CLICKS.find(c => c[0] === r.click)?.[1] || "")) : kind === "lock" ? "드럼 없음" : "클릭 없음"}: 평균 ${sgn(s.meanMs)}${s.driftMsPerBar != null && Math.abs(s.driftMsPerBar) >= 3 ? ` · 마디마다 ${Math.abs(Math.round(s.driftMsPerBar))}ms씩 ${s.driftMsPerBar < 0 ? "빨라짐" : "느려짐"}` : ""} (${s.hits}/${s.n})</li>`).join("");
         const re = r.time.reentries.length ? `<p class="small" style="margin:6px 0 0">클릭이 돌아올 때 첫 박: ${r.time.reentries.map(v => (v == null ? "못 잡음" : sgn(v))).join(" · ")}</p>` : "";
         time = `<div class="gv-time">
           <p class="small" style="margin:8px 0 0"><b>실제 연주 템포 ${tb ? tb.toFixed(1) : "-"} BPM</b> (설정 ${r.bpm})${tb ? ` · ${Math.abs(tb - r.bpm) < 0.5 ? "템포 유지" : tb > r.bpm ? `${(tb - r.bpm).toFixed(1)} BPM 빨라짐` : `${(r.bpm - tb).toFixed(1)} BPM 느려짐`}` : ""}</p>
@@ -201,7 +200,7 @@ export function makeGrooveTask(kind) {
           <div><b>${Math.round(r.within * 100)}%</b><small>±50ms 안</small></div>
           <div><b>${r.extras}</b><small>불필요한 어택(허용 ${r.allowedExtras})</small></div>
         </div>
-        <p class="small" style="margin:8px 0 0">${esc(tend)}${r.misses ? ` · 빠진 음 ${r.misses}개` : ""}${kind === "time" ? "" : `. 악보 색: <span class="j-dot good"></span>±25ms <span class="j-dot ok"></span>±50ms <span class="j-dot off"></span>그 이상 <span class="j-dot miss"></span>못 잡음`}</p>
+        <p class="small" style="margin:8px 0 0">${esc(tend)}${r.misses ? ` · 빠진 음 ${r.misses}개` : ""}${`. 악보 색: <span class="j-dot good"></span>±25ms <span class="j-dot ok"></span>±50ms <span class="j-dot off"></span>그 이상 <span class="j-dot miss"></span>못 잡음`}</p>
         ${time}
         <p class="muted small" style="margin:4px 0 0">${esc(r.next)}</p>`;
     }
@@ -295,14 +294,13 @@ export function makeGrooveTask(kind) {
     }
 
     // ── 재생·판정 ──
-    const plan = bpm => ({ line: G.loopEvents(x, loops()), clicks: G.clickBeats(x, loops()), drums: G.drumEvents(x, loops()) });
     function finishRun(entry) {
       const L = lad();
       const pass = entry.free ? true : entry.pass;
       const L2 = entry.free ? L : T.ladder(L, pass, o.step || 4);
-      if (!entry.free && pass) { const b = bestAll(); if (!b[x.id] || b[x.id] < entry.bpm) { b[x.id] = entry.bpm; setSetting("groove.best", b); } }
+      if (!entry.free && pass) { const b = bestAll(); if (!b[key()] || b[key()] < entry.bpm) { b[key()] = entry.bpm; setSetting("groove.best", b); } }
       const next = entry.free ? "BPM을 직접 올리거나 판정으로 바꿔 확인" : pass ? `다음 판정은 ${L2.bpm} BPM` : L2.bpm < entry.bpm ? `2번 연속 실패 → ${L2.bpm} BPM으로 내림` : `같은 ${entry.bpm} BPM으로 한 번 더`;
-      st = { ...st, lad: { ...st.lad, [x.id]: L2 }, passes: st.passes + (pass ? 1 : 0), last: { ...entry, id: x.id, next } };
+      st = { ...st, lad: { ...st.lad, [key()]: L2 }, passes: st.passes + (pass ? 1 : 0), last: { ...entry, id: x.id, next } };
       if (pass && st.passes % PASSES_PER_UNIT === 0) { st.units += 1; api.addUnit(1); api.toast(`통과 ${PASSES_PER_UNIT}회 · 완료 ${st.units}회`); }
       persist();
       drawAll();
@@ -321,7 +319,8 @@ export function makeGrooveTask(kind) {
         await unlockAudio();
         const ctx = getAudioContext();
         const L = lad(), bpm = L.bpm, spb = 60 / bpm;
-        const { line, clicks, drums } = plan(bpm);
+        const pl = plan();
+        const { line, clicks, drums } = pl;
         const startAt = ctx.currentTime + 0.25 + 4 * spb;
         const onsets = [];
         const off = judge && !window.__basslabGrooveInject ? listen({ onOnset: t => onsets.push(t) }) : () => {};
@@ -335,12 +334,13 @@ export function makeGrooveTask(kind) {
         if (my !== runToken) return;   // 멈춤
         if (!api.getActive() || !running()) { setState("일시정지되어 기록하지 않음"); return; }
         if (!judge) { finishRun({ free: true, bpm }); setState("끝까지 같이 침"); return; }
-        const expected = G.expectedOnsets(x, bpm, loops());
+        const expected = G.expectedOnsets(x, bpm, pl.loops);
         const latency = getSetting("tech.latency", 0.06);
         const detected = window.__basslabGrooveInject ? window.__basslabGrooveInject(expected, { bpm, latency }) : onsets.map(t => t - latency - startAt);
         const res = T.judge(expected, detected);
         const entry = { bpm, pass: res.pass, hitRate: res.hitRate, hits: res.hits, required: res.required, misses: res.misses, extras: res.extras, allowedExtras: res.allowedExtras, meanMs: res.meanMs, signedMs: res.signedMs, within: res.within, grades: T.gradeByIndex(res) };
-        if (kind === "time") entry.time = G.analyzeTime(res, x, bpm);
+        entry.time = G.analyzeTime(res, pl.sections, bpm);
+        entry.click = st.click;
         finishRun(entry);
         setState(res.pass ? "통과" : "다시");
         const rel = $("#gvResult"); if (rel && rel.scrollIntoView) rel.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -350,7 +350,7 @@ export function makeGrooveTask(kind) {
       if (busy) return;
       if (!running()) { api.toast("연습을 시작(재개)한 뒤 들을 수 있음"); return; }
       const bpm = lad().bpm;
-      const { clicks, drums } = plan(bpm);
+      const { clicks, drums } = plan();
       const one = { ...G.loopEvents(x, 1) };
       const perLoop = x.ticks / 12;
       busy = true; uiPlaying(true);
@@ -375,6 +375,12 @@ export function makeGrooveTask(kind) {
       container.querySelectorAll("#gvModeLive button").forEach(y => y.classList.toggle("sel", y === b));
       if (st.mode !== "judge") { stopCheck(); }
       drawHead();
+    };
+    $("#gvClickLive").onclick = e => {
+      const b = e.target.closest("[data-v]"); if (!b || busy) return;
+      st = { ...st, click: b.dataset.v }; persist(); setSetting(`groove.click.${kind}`, st.click);
+      container.querySelectorAll("#gvClickLive button").forEach(y => y.classList.toggle("sel", y === b));
+      drawAll();
     };
     $("#gvInput").onchange = async e => {
       if (busy) return;
@@ -404,7 +410,7 @@ export function makeGrooveTask(kind) {
     container.querySelector(".bf-controls").addEventListener("click", e => {
       const b = e.target.closest("[data-bpm]"); if (!b || busy) return;
       const L = lad();
-      st = { ...st, lad: { ...st.lad, [x.id]: { ...L, bpm: Math.max(40, Math.min(200, L.bpm + Number(b.dataset.bpm))), fails: 0 } } };
+      st = { ...st, lad: { ...st.lad, [key()]: { ...L, bpm: Math.max(40, Math.min(200, L.bpm + Number(b.dataset.bpm))), fails: 0 } } };
       persist(); drawHead();
     });
     load(); drawAll(); persist();

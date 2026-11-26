@@ -144,10 +144,12 @@ test("병합 계획 계산", () => {
   assert.deepEqual(plan, { added: 1, replaced: 1, total: 4 });
 });
 
-test("레벨·완료 단위 정의가 결정 사항과 일치(베이스 v0.4: Rhythm·Notes·Arpeggios·Ear Lab)", () => {
+test("레벨·완료 단위 정의가 결정 사항과 일치(베이스 v0.5: 7개 모듈)", () => {
   const counts = Object.fromEntries(MODULES.map(m => [m.id, m.levels.length]));
-  assert.deepEqual(counts, { rhythm: 3, notes: 2, arps: 4, ear: 3 });
-  assert.deepEqual(MODULES.map(m => m.id), ["rhythm", "notes", "arps", "ear"]);   // 박자·리듬 우선, Scales는 메뉴에서 뺌   // 다른 모듈은 베이스용으로 바꾼 뒤 추가, E4는 베이스 라인이 생기면 추가
+  assert.deepEqual(counts, { notes: 2, rhythm: 5, groove: 4, technique: 0, arps: 7, slap: 0, ear: 3 });
+  // 7개 모듈(사용자 결정): 음 찾기, 박자 유지, 장르별 그루브, 테크닉, 코드톤·스케일, 슬랩, 청음
+  assert.deepEqual(MODULES.map(m => m.id), ["notes", "rhythm", "groove", "technique", "arps", "slap", "ear"]);
+  assert.ok(MODULES.find(m => m.id === "slap").soon);   // 다른 모듈은 베이스용으로 바꾼 뒤 추가, E4는 베이스 라인이 생기면 추가
   const notes = MODULES.find(m => m.id === "notes");
   assert.equal(notes.levels[0].tasks[0].unit, UNIT.noteCycle);
   assert.deepEqual(notes.levels.map(l => l.name), ["N1 무작위 2현", "N2 전체 4현"]);

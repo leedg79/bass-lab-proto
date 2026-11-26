@@ -13,6 +13,8 @@
   --m-notes: #a6f36b;
   --m-chords: #78a9ff;
   --m-arps: #78a9ff;
+  --m-groove: #ff8fb8;
+  --m-slap: #ff9f43;
   --m-rhythm: #ffb86b;
   --m-scales: #c9a0ff;
   --m-ear: #6be3e0;
@@ -666,3 +668,11 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
 .gv-secs { margin: 6px 0 0; padding-left: 18px; }
 .gv-secs li { margin: 2px 0; }
 #gvBeats .beat.on { background: var(--m-rhythm, #ffb86b); }
+
+/* 홈 보기 전환·단계별 코스 */
+.home-view { margin: 12px 0 14px; }
+.module-card.soon { opacity: .45; }
+.step-tabs button { min-width: 0; }
+.course-item { border-left: 3px solid var(--mc); }
+.course-item .course-mod { display: block; color: var(--mc); font-size: 11px; letter-spacing: .02em; margin-bottom: 2px; }
+.course-item.soon { opacity: .5; }

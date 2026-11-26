@@ -27,6 +27,7 @@ import { renderLickEditor } from "./modules/licks/editor-view.js";
 import { loadMyLicks, mergeMyLicks } from "./modules/licks/my-licks.js";
 import { getFlags as getLickFlags } from "./modules/licks/lick-flags.js";
 import { renderJam } from "./modules/jam/jam-view.js";
+import { STEPS, COURSES } from "./data/courses.js";
 import { ArpFind, ArpQuality, ArpInversion, ArpTwoOctave, ArpFollow, renderArpDictionary } from "./modules/arps/arp-views.js";
 import { makePatternTask } from "./modules/rhythm/pattern-view.js";
 import { makeTechTask } from "./modules/technique/tech-view.js";
@@ -37,7 +38,7 @@ import * as RhythmPhrase from "./modules/rhythm/phrase-view.js";
 import { strum, loadInstrument } from "./audio/sampler.js";
 import { unlockAudio } from "./audio/context.js";
 
-const APP_VERSION = "0.4.0";
+const APP_VERSION = "0.5.0";
 
 // 구현된 과제의 연습 화면 (모듈/과제 → 화면 모듈)
 // 화면 모듈: settingsHtml, bindSettings, readSettings, mount, clearFinder
@@ -64,9 +65,8 @@ const CONTENT = {
   "rhythm/fingerstyle": makePatternTask("finger"),
   "rhythm/percussive": makePatternTask("perc"),
   "rhythm/phrase": RhythmPhrase,
-  "rhythm/time-keep": makeGrooveTask("time"),
-  "rhythm/rhythm-pattern": makeGrooveTask("pattern"),
-  "rhythm/groove-lock": makeGrooveTask("lock"),
+  "rhythm/time-set": makeGrooveTask("time"),
+  "groove/groove-lock": makeGrooveTask("lock"),
   "ear/note-name": makeEarTask("note"),
   "ear/interval": makeEarTask("interval"),
   "ear/melodic": makeEarTask("melodic"),
@@ -83,7 +83,7 @@ const ARP_CONTENT = {
   "a3/arp-inversion": ArpInversion, "a3/arp-two-octave": ArpTwoOctave, "a4/arp-follow": ArpFollow
 };
 const contentFor = (mod, task, level) => {
-  if (mod === "arps") return ARP_CONTENT[`${level}/${task}`] || null;
+  if (mod === "arps") return ARP_CONTENT[`${level}/${task}`] || (["pb", "mm", "md"].includes(level) ? CONTENT[`scales/${task}`] || null : null);
   if (mod === "technique" && task === "drill") return TECH_TASKS[level] || null; const t = findTask(mod, level, task); return t && t.pending ? null : CONTENT[`${mod}/${task}`] || null; };
 function clearContent() { [...Object.values(CONTENT), ...Object.values(TECH_TASKS), ...Object.values(ARP_CONTENT)].forEach(c => c.clearFinder && c.clearFinder()); }
 
@@ -266,22 +266,55 @@ const ICON = {
   data: '<svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>'
 };
 
+// 단계별 보기: 입문~고급 단계마다 모듈 과제를 모은 연습 세트
+function stepsHtml() {
+  const cur = Store.getSetting("home.step", 1);
+  const step = STEPS.find(x => x.id === cur) || STEPS[0];
+  const items = COURSES[step.id] || [];
+  return `
+    <div class="seg wide-seg step-tabs">${STEPS.map(x => `<button type="button" data-step="${x.id}" class="${x.id === step.id ? "sel" : ""}">${esc(x.name)}</button>`).join("")}</div>
+    <p class="muted small" style="margin:10px 2px">${esc(step.goal)}</p>
+    <div class="list">${items.map((it, i) => {
+      const m = findModule(it.mod);
+      const soon = !m || m.soon || !findTask(it.mod, it.lvl, it.task);
+      const lv = !soon ? findLevel(it.mod, it.lvl) : null;
+      return `<button class="list-item course-item ${soon ? "soon" : ""}" type="button" ${soon ? "data-soon" : `data-course="${step.id}:${i}"`} style="--mc:${modColor(it.mod)}">
+        <div class="txt"><small class="course-mod">${esc(m ? m.name : it.mod)}${lv ? ` · ${esc(lv.name)}` : ""}</small><b>${esc(it.title)}</b><span>${esc(soon ? `준비 중 · ${it.note || ""}` : it.note || "")}</span></div>
+        <div class="chev">${soon ? "" : "›"}</div>
+      </button>`;
+    }).join("")}</div>
+    <p class="muted small" style="margin:8px 2px 0">항목을 누르면 주제·설정이 채워진 연습 화면으로 감. 기록은 각 모듈 과제로 쌓여 모듈별 보기와 학습일지에 함께 나옴</p>`;
+}
+function openCourseItem(ref) {
+  const [sid, idx] = ref.split(":").map(Number);
+  const it = (COURSES[sid] || [])[idx];
+  if (!it) return;
+  if (it.topics && it.topics.length) Store.setSetting(`topics:${it.mod}/${it.lvl}/${it.task}`, it.topics);
+  for (const [k, v] of Object.entries(it.set || {})) Store.setSetting(k, v);
+  go(`m/${it.mod}/${it.lvl}/${it.task}`);
+}
+
 function renderHome() {
+  const homeView = Store.getSetting("home.view", "modules");
   view.innerHTML = `
     <div class="page-head">
       <div class="eyebrow">Bass Practice System</div>
       <h1>무엇을 연습할까요</h1>
     </div>
     <div class="today" id="today"><span class="muted">오늘 연습</span> <b>-</b></div>
+    <div class="seg wide-seg home-view" id="homeView"><button type="button" data-v="modules" class="${homeView === "modules" ? "sel" : ""}">모듈별 보기</button><button type="button" data-v="steps" class="${homeView === "steps" ? "sel" : ""}">단계별 보기</button></div>
+    <div id="homeModules" class="${homeView === "modules" ? "" : "hidden"}">
     <div class="module-grid">
       ${MODULES.map((m, i) => `
-        <button class="module-card ${MODULES.length % 2 && i === MODULES.length - 1 ? "wide" : ""}" type="button" data-mod="${m.id}" style="--mc:${modColor(m.id)}">
+        <button class="module-card ${MODULES.length % 2 && i === MODULES.length - 1 ? "wide" : ""} ${m.soon ? "soon" : ""}" type="button" ${m.soon ? "data-soon" : `data-mod="${m.id}"`} style="--mc:${modColor(m.id)}">
           <span class="bar"></span>
-          <span><strong>${esc(m.name)}</strong><small>${esc(m.sub)}</small></span>
-          <span class="meta">${m.levels.length} LEVELS</span>
+          <span><strong>${i + 1}. ${esc(m.name)}</strong><small>${esc(m.sub)}</small></span>
+          <span class="meta">${m.soon ? esc(m.soon) : `${m.levels.length} LEVELS`}</span>
         </button>`).join("")}
     </div>
-    <p class="muted small" style="margin:12px 2px 14px">Bass Lines · Technique는 베이스용으로 바꿔 차례로 추가할 예정임</p>
+    </div>
+    <div id="homeSteps" class="${homeView === "steps" ? "" : "hidden"}">${stepsHtml()}</div>
+    <div style="height:14px"></div>
     <div class="tool-row">
       <button class="tool-card" type="button" data-go="jam">${ICON.jam}<div><b>백킹 트랙</b><span>드럼·코드 반주(베이스 빠짐)</span></div></button>
       <button class="tool-card" type="button" data-go="journal">${ICON.journal}<div><b>학습일지</b><span>연·월·일 기록</span></div></button>
@@ -289,6 +322,13 @@ function renderHome() {
     </div>
     <div id="homeNotice"></div>`;
   view.onclick = e => {
+    const hv = e.target.closest("#homeView [data-v]");
+    if (hv) { Store.setSetting("home.view", hv.dataset.v); return renderHome(); }
+    const st = e.target.closest("[data-step]");
+    if (st) { Store.setSetting("home.step", Number(st.dataset.step)); $("#homeSteps").innerHTML = stepsHtml(); return; }
+    const ci = e.target.closest("[data-course]");
+    if (ci) return openCourseItem(ci.dataset.course);
+    if (e.target.closest("[data-soon]")) return toast("이 모듈은 준비 중임");
     const m = e.target.closest("[data-mod]");
     if (m) return go(`m/${m.dataset.mod}`);
     const g = e.target.closest("[data-go]");
@@ -312,7 +352,7 @@ function renderHome() {
 // ───────────── 레벨 선택 ─────────────
 function renderLevels(modId) {
   const m = findModule(modId);
-  if (!m) { go("", { replace: true }); return null; }
+  if (!m || m.soon) { go("", { replace: true }); return null; }
   view.innerHTML = `
     <div class="page-head">
       <div class="eyebrow">${esc(m.name)} · 레벨 선택</div>

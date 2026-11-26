@@ -1,4 +1,4 @@
-import { TIME_MODES, PATTERN_TOPICS, GROOVE_TOPICS } from "../modules/groove/groove-data.js";
+import { PATTERNS, PATTERN_TOPICS, GROOVES, GROOVE_TOPICS } from "../modules/groove/groove-data.js";
 // 모듈·레벨·과제·완료 단위 정의표
 // 학습 콘텐츠(문제 출제, 지판 표시 등)는 2단계 이후 각 모듈에서 구현함
 // 이 파일은 세션 기록과 학습일지가 사용하는 "목록"만 정의함
@@ -111,18 +111,23 @@ const PLAY_TASKS = [
 ];
 
 // 베이스 앱으로 옮긴 모듈만 보여 줌. 나머지는 단계별로 베이스용으로 바꾼 뒤 추가함
-// Scales는 사용자 결정(2026-11-26)으로 메뉴에서 뺌(코드는 남김). 박자·리듬이 우선
-const READY = { notes: null, rhythm: null, arps: null, ear: ["e1", "e2", "e3"] };
+// 7개 모듈(사용자 결정 2026-11-26): 음 찾기, 박자 유지, 장르별 그루브, 테크닉, 코드톤·스케일, 슬랩, 청음
+// 스케일 레벨은 코드톤·스케일(arps) 안에. 기타 앱의 Chords·Licks·Rhythm·Scales 모듈 정의는 남기지만 메뉴에는 없음
+const READY = { notes: null, rhythm: null, groove: null, technique: null, arps: null, slap: null, ear: ["e1", "e2", "e3"] };
 // Arpeggios(기타 앱의 Chords 자리): 레벨 = 코드 묶음, 과제 = 찾기 → 종류 바꾸기 → 전위·2옥타브 → 진행 위 따라가기
 const ARP_FIND = { id: "arp-find", name: "아르페지오 찾기 · Arpeggio Finder", type: "finding", unit: { kind: "count", size: 12, label: "근음 12개 = 1회" } };
 const ARP_QUALITY = { id: "arp-quality", name: "코드 종류 바꾸기 · Quality Switch", type: "finding", unit: { kind: "cycle", size: 0, label: "고른 종류 1순환 = 1회" } };
 const ARP_DICT = { id: "arp-dict", name: "아르페지오 사전 · Arpeggio Dictionary", type: "reference", unit: UNIT.none, reference: true };
 
+// 박자 유지·그루브 과제(레벨 = 리듬 묶음, 주제 = 패턴 종류·장르)
+const TIME_SET = { id: "time-set", name: "기본 리듬 세트 · Rhythm Set", type: "timing", unit: UNIT.groove3 };
+const GROOVE_SET = { id: "groove-lock", name: "드럼과 맞추기 · Groove Lock", type: "timing", unit: UNIT.groove3 };
+
 const ALL_MODULES = [
   {
     id: "arps",
-    name: "Arpeggios",
-    sub: "코드톤 · 아르페지오",
+    name: "Chord Tones · Scales",
+    sub: "코드톤 · 아르페지오 · 스케일",
     stage: 3,
     levels: [
       { id: "a1", name: "A1 Triads", desc: "메이저·마이너·디미니시드·어그먼티드·서스4 트라이어드 아르페지오", tasks: [ARP_FIND, ARP_QUALITY, ARP_DICT] },
@@ -141,7 +146,10 @@ const ALL_MODULES = [
           { id: "arp-follow", name: "진행 위 코드톤 따라가기 · Chord-Tone Follow", type: "play", unit: { kind: "mission", size: 1, label: "진행 2바퀴 = 1회" } },
           { ...ARP_DICT }
         ]
-      }
+      },
+      { id: "pb", name: "S1 Pentatonic & Blues", desc: "메이저·마이너 펜타토닉, 블루스 스케일(4현 박스 5개)", tasks: scaleTasks() },
+      { id: "mm", name: "S2 Major & Minor Family", desc: "메이저, 내추럴·하모닉·멜로딕 마이너(1손가락 1프렛 자리)", tasks: scaleTasks() },
+      { id: "md", name: "S3 Modes", desc: "7개 모드, 시작음 기준 줄당 3음 포지션", tasks: scaleTasks({ modes: true }) }
     ]
   },
   {
@@ -175,22 +183,27 @@ const ALL_MODULES = [
   },
   {
     id: "rhythm",
-    name: "Rhythm",
-    sub: "박자·템포 유지 · 리듬 패턴 · 드럼과 맞추기",
+    name: "Time",
+    sub: "박자 유지 · 4·8·16비트·셔플 기본 리듬",
     stage: 4,
     levels: [
-      {
-        id: "r1", name: "R1 Time Keeping", desc: "클릭 2·4박만·1박만·2마디에 한 번, 클릭 사라지기, 박 쪼개기 바꾸기 — 클릭 없이 템포 유지",
-        tasks: [{ id: "time-keep", name: "박자·템포 유지 · Time Keeping", type: "timing", unit: UNIT.groove3 }]
-      },
-      {
-        id: "r2", name: "R2 Rhythm Patterns", desc: "8분 펌핑, 점음표, 16분, 셔플·셋잇단, 싱코페이션, 쉼표·끊어 치기, 고스트 노트, 당겨 치기",
-        tasks: [{ id: "rhythm-pattern", name: "리듬 패턴 · Rhythm Patterns", type: "timing", unit: UNIT.groove3 }]
-      },
-      {
-        id: "r3", name: "R3 Groove Lock", desc: "드럼 킥 패턴에 베이스 붙이기 — 록·팝·펑크·모타운·R&B·레게·보사노바·셔플·디스코·힙합",
-        tasks: [{ id: "groove-lock", name: "드럼과 맞추기 · Groove Lock", type: "timing", unit: UNIT.groove3 }]
-      }
+      { id: "b4", name: "4비트", desc: "4분·2분·온음표, 음 옮기기, 1·3박만·2·4박만 — 입문·초보", tasks: [TIME_SET] },
+      { id: "b8", name: "8비트", desc: "8분 펌핑, 점4분·3+3+2, 뒷박·찰스턴·앞당김, 끊어 치기 — 초보·초급", tasks: [TIME_SET] },
+      { id: "b16", name: "16비트", desc: "16분 연속·갤럽, 점8분, 16분 싱코페이션, 고스트 노트 — 초급~고급", tasks: [TIME_SET] },
+      { id: "bsh", name: "셔플·셋잇단", desc: "셔플 8분·부기, 셋잇단, 셔플을 셋잇단으로 보기 — 초보~중급", tasks: [TIME_SET] },
+      { id: "bmix", name: "혼합", desc: "박 쪼개기 바꾸기(4분 → 8분 → 셋잇단 → 16분), 당겨 치기·붙임줄 — 중급·고급", tasks: [TIME_SET] }
+    ]
+  },
+  {
+    id: "groove",
+    name: "Groove",
+    sub: "장르별 그루브 · 드럼 킥에 붙이기",
+    stage: 4,
+    levels: [
+      { id: "g1", name: "록·팝·디스코", desc: "록 8비트 킥, 팝 근음–5음, 디스코 옥타브", tasks: [GROOVE_SET] },
+      { id: "g2", name: "모타운·힙합·R&B·펑크", desc: "모타운 당김, 붐뱁, R&B 하프타임, 펑크 16분 킥·고스트", tasks: [GROOVE_SET] },
+      { id: "g3", name: "레게·라틴", desc: "원 드롭, 스테퍼, 보사노바, 툼바오", tasks: [GROOVE_SET] },
+      { id: "g4", name: "블루스·셔플", desc: "셔플 부기, 근음–5음–6음, 셔플 앞당김", tasks: [GROOVE_SET] }
     ]
   },
   {
@@ -212,19 +225,8 @@ const ALL_MODULES = [
     stage: 5,
     levels: LICK_LEVELS.map(l => ({ id: l.id, name: l.name, desc: l.desc, tasks: l.id === "l7" ? MY_LICK_TASKS : LICK_TASKS }))
   },
-  {
-    id: "technique",
-    name: "Technique",
-    sub: "왼손 · 벤딩 · 피킹 · 뮤팅 · 템포 사다리",
-    stage: 6,
-    levels: [
-      { id: "t1", name: "T1 Fretting Hand", desc: "크로매틱, 스파이더, 손가락 독립, 넓혀 짚기, 자리 옮기기", tasks: [{ id: "drill", name: "템포 사다리 · Tempo Ladder", type: "technique", unit: UNIT.tech3 }] },
-      { id: "t2", name: "T2 Bending · Vibrato", desc: "반음·온음 벤딩, 벤딩 섞기, 비브라토", tasks: [{ id: "drill", name: "템포 사다리 · Tempo Ladder", type: "technique", unit: UNIT.tech3 }] },
-      { id: "t3", name: "T3 Picking", desc: "얼터네이트, 줄 넘기, 스트링 스킵, 이코노미, 트레몰로, 코드톤·스케일 피킹", tasks: [{ id: "drill", name: "템포 사다리 · Tempo Ladder", type: "technique", unit: UNIT.tech3 }] },
-      { id: "t4", name: "T4 Muting · Expression", desc: "팜뮤트, 스타카토, 해머·풀 레가토, 슬라이드", tasks: [{ id: "drill", name: "템포 사다리 · Tempo Ladder", type: "technique", unit: UNIT.tech3 }] },
-      { id: "t5", name: "T5 Applied Etudes", desc: "벤딩·리프·시퀀스·레가토·스트링 스킵을 섞은 응용 연습곡", tasks: [{ id: "drill", name: "템포 사다리 · Tempo Ladder", type: "technique", unit: UNIT.tech3 }] }
-    ]
-  },
+  { id: "technique", name: "Technique", sub: "속도 · 손가락 운지 · 피킹 강도", stage: 6, soon: "준비 중", levels: [] },
+  { id: "slap", name: "Slap", sub: "엄지 · 팝 · 고스트 · 더블 썸", stage: 7, soon: "준비 중", levels: [] },
   {
     id: "ear",
     name: "Ear Lab",
@@ -255,7 +257,7 @@ const ALL_MODULES = [
   }
 ];
 
-const ORDER = ["rhythm", "notes", "arps", "lines", "technique", "ear", "scales"];
+const ORDER = ["notes", "rhythm", "groove", "technique", "arps", "slap", "ear"];
 export const MODULES = ALL_MODULES.filter(m => m.id in READY).sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)).map(m => (READY[m.id] ? { ...m, levels: m.levels.filter(l => READY[m.id].includes(l.id)) } : m));
 
 export function findModule(moduleId) {
@@ -309,9 +311,8 @@ const ARP_CORE = [["maj", "메이저"], ["min", "마이너"], ["maj7", "maj7"], 
 const FOLLOW_PROGS = [["blues12", "12마디 블루스"], ["minor-blues", "마이너 블루스"], ["pop", "팝 I–V–vi–IV"], ["rock", "록 I–♭VII–IV–I"], ["major251", "메이저 ii–V–I"], ["minor251", "마이너 ii–V–i"], ["1625", "I–vi–ii–V"], ["dorian-vamp", "도리안 뱀프"], ["mixo-vamp", "믹솔리디안 뱀프"]];
 
 const LEVEL_TOPICS = {
-  "rhythm/r1": tp(Object.entries(TIME_MODES).map(([id, m]) => [id, m.name])),
-  "rhythm/r2": tp(Object.entries(PATTERN_TOPICS)),
-  "rhythm/r3": tp(Object.entries(GROOVE_TOPICS)),
+  ...Object.fromEntries(["b4", "b8", "b16", "bsh", "bmix"].map(l => [`rhythm/${l}`, tp([...new Set(PATTERNS.filter(p => p[1] === l).map(p => p[2]))].map(t => [t, PATTERN_TOPICS[t]]))])),
+  ...Object.fromEntries(["g1", "g2", "g3", "g4"].map(l => [`groove/${l}`, tp([...new Set(GROOVES.filter(p => p[1] === l).map(p => p[2]))].map(t => [t, GROOVE_TOPICS[t]]))])),
   "arps/a1": tp(ARP_TRIADS),
   "arps/a2": tp(ARP_SEVENTHS),
   "technique/t1": tp([["chromatic", "크로매틱"], ["spider", "스파이더"], ["independence", "손가락 독립"], ["stretch", "넓혀 짚기"], ["shift", "자리 옮기기"]]),
@@ -349,6 +350,10 @@ const TASK_TOPICS = {
   "ear/e3/melodic": [],
   "ear/e3/harmonic": []
 };
+
+// 스케일 레벨은 코드톤·스케일 모듈(arps) 안으로 옮김: 같은 주제 목록을 arps/... 이름으로도
+for (const [k, v] of Object.entries(LEVEL_TOPICS)) if (k.startsWith("scales/")) LEVEL_TOPICS["arps/" + k.slice(7)] = v;
+for (const [k, v] of Object.entries(TASK_TOPICS)) if (k.startsWith("scales/")) TASK_TOPICS["arps/" + k.slice(7)] = v;
 
 // 과제의 선택 가능한 학습 주제 (없으면 빈 배열 → 주제 선택 없이 시작)
 export function topicsFor(moduleId, levelId, taskId) {
