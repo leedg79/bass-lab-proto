@@ -109,7 +109,7 @@ export function scoreSvg(el, events, { chords = [], ticks = BAR, flats = false, 
         else {
           const keys = e.notes.map(n => keyOf(TUNING[n.s - 1] + n.f, flats));
           const order = keys.map((k, i) => [k, TUNING[e.notes[i].s - 1] + e.notes[i].f]).sort((a, c) => a[1] - c[1]).map(a => a[0]);
-          sn = new V.StaveNote({ clef: "bass", keys: order, duration: code, auto_stem: true });
+          sn = new V.StaveNote({ clef: "bass", keys: e.ghost ? order.map(k => k + "/x2") : order, duration: code, auto_stem: true });   // 고스트 노트는 x 머리
           if (code.endsWith("d")) V.Dot.buildAndAttach([sn], { all: true });
         }
         if (!x2.cont && chordAt.has(x2.at) && !x2.pad) sn.addModifier(new V.Annotation(chordAt.get(x2.at)).setVerticalJustification(V.Annotation.VerticalJustify.TOP).setFont("Arial", 13, "bold"), 0);
@@ -119,7 +119,7 @@ export function scoreSvg(el, events, { chords = [], ticks = BAR, flats = false, 
       if (tab) {
         if (isRest || x2.cont) tn = new V.GhostNote({ duration: code });
         else {
-          tn = new V.TabNote({ positions: e.notes.map(n => ({ str: n.s, fret: n.f })), duration: code });
+          tn = new V.TabNote({ positions: e.notes.map(n => ({ str: n.s, fret: e.ghost ? "X" : n.f })), duration: code });
           if (e.bend) tn.addModifier(new V.Bend(e.bend === 1 ? "1/2" : e.bend === 2 ? "Full" : "1 1/2"), 0);
           if (e.rel) tn.addModifier(new V.Annotation("R").setVerticalJustification(V.Annotation.VerticalJustify.TOP), 0);
           if (e.vib) tn.addModifier(new V.Vibrato(), 0);

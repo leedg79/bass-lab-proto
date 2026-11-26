@@ -647,3 +647,22 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
 .ear-verdict.ok { color: #a6f06a; } .ear-verdict.ng { color: #ff9a6a; }
 .ear-rhy { display: grid; gap: 8px; }
 .ear-rh { background: transparent; border: 1px solid #263244; border-radius: 10px; padding: 4px; }
+
+/* Rhythm(베이스): 클릭 지도·드럼 칸·시간 분석 */
+.gv-map { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+.gv-bar { display: flex; align-items: center; gap: 4px; padding: 6px; border: 1px solid var(--line, #2a3446); border-radius: 8px; }
+.gv-bar small { color: var(--muted, #8f9bad); width: 16px; font-size: 11px; }
+.gv-bar i { flex: 1; height: 14px; border-radius: 3px; background: #2a3446; }
+.gv-bar i.on { background: var(--m-rhythm, #ffb86b); }
+.gv-bar.silent { opacity: .45; border-style: dashed; }
+.gv-drums { display: grid; gap: 4px; margin-top: 6px; }
+.gv-drow { display: flex; align-items: center; gap: 6px; }
+.gv-drow small { width: 44px; color: var(--muted, #8f9bad); font-size: 11px; }
+.gv-drow span { flex: 1; display: flex; gap: 2px; }
+.gv-drow i { flex: 1; height: 12px; border-radius: 2px; background: #1c2433; }
+.gv-drow i.beat { box-shadow: inset 2px 0 0 #3c485c; }
+.gv-drow i.on { background: #78a9ff; }
+.gv-drow i.on.acc { background: #ffcf5c; }
+.gv-secs { margin: 6px 0 0; padding-left: 18px; }
+.gv-secs li { margin: 2px 0; }
+#gvBeats .beat.on { background: var(--m-rhythm, #ffb86b); }

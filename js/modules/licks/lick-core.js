@@ -31,7 +31,7 @@ export function parseToken(tok) {
   if (!m) throw new Error(`길이 해석 불가: ${tok}`);
   const dur = DUR[m[1]];
   let rest = m[2];
-  const ev = { dur, bend: 0, rel: false, h: false, p: false, sl: false, vib: false, chrom: false, rest: pos === "-" };
+  const ev = { dur, bend: 0, rel: false, h: false, p: false, sl: false, vib: false, chrom: false, ghost: false, rest: pos === "-" };
   const take = re => { const x = re.exec(rest); if (x) rest = rest.replace(re, ""); return x; };
   const b = take(/b([123])/); if (b) ev.bend = Number(b[1]);
   if (take(/sl/)) ev.sl = true;
@@ -39,6 +39,7 @@ export function parseToken(tok) {
   if (take(/h/)) ev.h = true;
   if (take(/p/)) ev.p = true;
   if (take(/~/)) ev.vib = true;
+  if (take(/x/)) ev.ghost = true;   // 고스트 노트(뮤트한 소리)
   if (take(/c/)) ev.chrom = true;
   if (rest) throw new Error(`기법 해석 불가: ${tok}`);
   ev.notes = ev.rest ? [] : pos.split("+").map(x => { const [s, f] = x.split("-").map(Number); return { s, f }; });

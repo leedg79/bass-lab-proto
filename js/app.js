@@ -30,13 +30,14 @@ import { renderJam } from "./modules/jam/jam-view.js";
 import { ArpFind, ArpQuality, ArpInversion, ArpTwoOctave, ArpFollow, renderArpDictionary } from "./modules/arps/arp-views.js";
 import { makePatternTask } from "./modules/rhythm/pattern-view.js";
 import { makeTechTask } from "./modules/technique/tech-view.js";
+import { makeGrooveTask } from "./modules/groove/groove-view.js";
 import { makeEarTask } from "./modules/ear/ear-view.js";
 import * as RhythmReading from "./modules/rhythm/reading-view.js";
 import * as RhythmPhrase from "./modules/rhythm/phrase-view.js";
 import { strum, loadInstrument } from "./audio/sampler.js";
 import { unlockAudio } from "./audio/context.js";
 
-const APP_VERSION = "0.3.0";
+const APP_VERSION = "0.4.0";
 
 // 구현된 과제의 연습 화면 (모듈/과제 → 화면 모듈)
 // 화면 모듈: settingsHtml, bindSettings, readSettings, mount, clearFinder
@@ -63,6 +64,9 @@ const CONTENT = {
   "rhythm/fingerstyle": makePatternTask("finger"),
   "rhythm/percussive": makePatternTask("perc"),
   "rhythm/phrase": RhythmPhrase,
+  "rhythm/time-keep": makeGrooveTask("time"),
+  "rhythm/rhythm-pattern": makeGrooveTask("pattern"),
+  "rhythm/groove-lock": makeGrooveTask("lock"),
   "ear/note-name": makeEarTask("note"),
   "ear/interval": makeEarTask("interval"),
   "ear/melodic": makeEarTask("melodic"),
@@ -277,7 +281,7 @@ function renderHome() {
           <span class="meta">${m.levels.length} LEVELS</span>
         </button>`).join("")}
     </div>
-    <p class="muted small" style="margin:12px 2px 14px">Bass Lines · Rhythm · Technique는 베이스용으로 바꿔 차례로 추가할 예정임</p>
+    <p class="muted small" style="margin:12px 2px 14px">Bass Lines · Technique는 베이스용으로 바꿔 차례로 추가할 예정임</p>
     <div class="tool-row">
       <button class="tool-card" type="button" data-go="jam">${ICON.jam}<div><b>백킹 트랙</b><span>드럼·코드 반주(베이스 빠짐)</span></div></button>
       <button class="tool-card" type="button" data-go="journal">${ICON.journal}<div><b>학습일지</b><span>연·월·일 기록</span></div></button>

@@ -1,6 +1,6 @@
 // 오프라인 실행용 서비스 워커
 // 파일을 수정해 다시 배포할 때는 CACHE 이름의 숫자를 올려야 iPhone에 새 버전이 반영됨
-const CACHE = "basslab-v0.3.0";
+const CACHE = "basslab-v0.4.0";
 const ASSETS = [
   "./",
   "./index.html",
@@ -34,6 +34,10 @@ const ASSETS = [
   "./js/render/chordsheet.js",
   "./js/theory/scales.js",
   "./js/theory/arpeggio.js",
+  "./js/modules/groove/groove-data.js",
+  "./js/modules/groove/groove-core.js",
+  "./js/modules/groove/groove-view.js",
+  "./js/audio/groove-player.js",
   "./js/modules/arps/arp-core.js",
   "./js/modules/arps/arp-views.js",
   "./js/render/scaleboard.js",

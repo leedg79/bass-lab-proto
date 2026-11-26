@@ -1,3 +1,4 @@
+import { TIME_MODES, PATTERN_TOPICS, GROOVE_TOPICS } from "../modules/groove/groove-data.js";
 // 모듈·레벨·과제·완료 단위 정의표
 // 학습 콘텐츠(문제 출제, 지판 표시 등)는 2단계 이후 각 모듈에서 구현함
 // 이 파일은 세션 기록과 학습일지가 사용하는 "목록"만 정의함
@@ -26,7 +27,8 @@ export const UNIT = {
   pattern8: { kind: "mission", size: 1, label: "패턴 1개를 8마디(같이·혼자 치기) = 1회" },
   reading10: { kind: "count", size: 10, label: "10문제 = 1회" },
   tech3: { kind: "mission", size: 3, label: "박자 판정 통과 3회 = 1회" },
-  phrase8: { kind: "mission", size: 1, label: "프레이즈 1개를 8마디(같이·혼자 치기) = 1회" }
+  phrase8: { kind: "mission", size: 1, label: "프레이즈 1개를 8마디(같이·혼자 치기) = 1회" },
+  groove3: { kind: "mission", size: 3, label: "판정 통과(또는 판정 없이 끝까지) 3회 = 1회" }
 };
 
 // 세션 유형
@@ -41,7 +43,8 @@ export const SESSION_TYPES = {
   transcribe: "채보",
   reference: "사전",
   lick: "릭 연습",
-  technique: "테크닉"
+  technique: "테크닉",
+  timing: "박자·리듬"
 };
 
 const CHORD_TASKS = [
@@ -108,7 +111,8 @@ const PLAY_TASKS = [
 ];
 
 // 베이스 앱으로 옮긴 모듈만 보여 줌. 나머지는 단계별로 베이스용으로 바꾼 뒤 추가함
-const READY = { notes: null, arps: null, scales: null, ear: ["e1", "e2", "e3"] };
+// Scales는 사용자 결정(2026-11-26)으로 메뉴에서 뺌(코드는 남김). 박자·리듬이 우선
+const READY = { notes: null, rhythm: null, arps: null, ear: ["e1", "e2", "e3"] };
 // Arpeggios(기타 앱의 Chords 자리): 레벨 = 코드 묶음, 과제 = 찾기 → 종류 바꾸기 → 전위·2옥타브 → 진행 위 따라가기
 const ARP_FIND = { id: "arp-find", name: "아르페지오 찾기 · Arpeggio Finder", type: "finding", unit: { kind: "count", size: 12, label: "근음 12개 = 1회" } };
 const ARP_QUALITY = { id: "arp-quality", name: "코드 종류 바꾸기 · Quality Switch", type: "finding", unit: { kind: "cycle", size: 0, label: "고른 종류 1순환 = 1회" } };
@@ -172,27 +176,20 @@ const ALL_MODULES = [
   {
     id: "rhythm",
     name: "Rhythm",
-    sub: "스트로크 · 컴핑 · 핑거 · 퍼커시브 · 프레이즈",
-    stage: 5,
+    sub: "박자·템포 유지 · 리듬 패턴 · 드럼과 맞추기",
+    stage: 4,
     levels: [
       {
-        id: "r1", name: "R1 Strumming", desc: "4·8·16비트, 다운·업, 악센트, 뮤트, 쉼표, 싱코페이션, 셔플, 장르별 스트로크, 리듬 읽기",
-        tasks: [
-          { id: "strum-pattern", name: "스트로크 패턴 · Strum Patterns", type: "pattern", unit: UNIT.pattern8 },
-          { id: "rhythm-reading", name: "리듬 읽기 · Rhythm Reading", type: "finding", unit: UNIT.reading10 }
-        ]
+        id: "r1", name: "R1 Time Keeping", desc: "클릭 2·4박만·1박만·2마디에 한 번, 클릭 사라지기, 박 쪼개기 바꾸기 — 클릭 없이 템포 유지",
+        tasks: [{ id: "time-keep", name: "박자·템포 유지 · Time Keeping", type: "timing", unit: UNIT.groove3 }]
       },
       {
-        id: "r2", name: "R2 Comping · Fingerstyle · Percussive", desc: "코드 리듬·커팅·뮤트·싱코페이션 컴핑, 아르페지오·베이스+코드, 바디 타격·스트링 히트·팜뮤트",
-        tasks: [
-          { id: "comping", name: "컴핑 리듬 · Comping", type: "pattern", unit: UNIT.pattern8 },
-          { id: "fingerstyle", name: "핑거스타일 · Fingerstyle", type: "pattern", unit: UNIT.pattern8 },
-          { id: "percussive", name: "퍼커시브 · Percussive", type: "pattern", unit: UNIT.pattern8 }
-        ]
+        id: "r2", name: "R2 Rhythm Patterns", desc: "8분 펌핑, 점음표, 16분, 셔플·셋잇단, 싱코페이션, 쉼표·끊어 치기, 고스트 노트, 당겨 치기",
+        tasks: [{ id: "rhythm-pattern", name: "리듬 패턴 · Rhythm Patterns", type: "timing", unit: UNIT.groove3 }]
       },
       {
-        id: "r4", name: "R3 Rhythm Phrases", desc: "리프, 싱코페이션 프레이즈, 반복·변형, 코드·스케일 기반 프레이즈",
-        tasks: [{ id: "phrase", name: "리듬 프레이즈 · Rhythm Phrases", type: "pattern", unit: UNIT.phrase8 }]
+        id: "r3", name: "R3 Groove Lock", desc: "드럼 킥 패턴에 베이스 붙이기 — 록·팝·펑크·모타운·R&B·레게·보사노바·셔플·디스코·힙합",
+        tasks: [{ id: "groove-lock", name: "드럼과 맞추기 · Groove Lock", type: "timing", unit: UNIT.groove3 }]
       }
     ]
   },
@@ -258,7 +255,7 @@ const ALL_MODULES = [
   }
 ];
 
-const ORDER = ["notes", "arps", "scales", "lines", "rhythm", "technique", "ear"];
+const ORDER = ["rhythm", "notes", "arps", "lines", "technique", "ear", "scales"];
 export const MODULES = ALL_MODULES.filter(m => m.id in READY).sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)).map(m => (READY[m.id] ? { ...m, levels: m.levels.filter(l => READY[m.id].includes(l.id)) } : m));
 
 export function findModule(moduleId) {
@@ -312,6 +309,9 @@ const ARP_CORE = [["maj", "메이저"], ["min", "마이너"], ["maj7", "maj7"], 
 const FOLLOW_PROGS = [["blues12", "12마디 블루스"], ["minor-blues", "마이너 블루스"], ["pop", "팝 I–V–vi–IV"], ["rock", "록 I–♭VII–IV–I"], ["major251", "메이저 ii–V–I"], ["minor251", "마이너 ii–V–i"], ["1625", "I–vi–ii–V"], ["dorian-vamp", "도리안 뱀프"], ["mixo-vamp", "믹솔리디안 뱀프"]];
 
 const LEVEL_TOPICS = {
+  "rhythm/r1": tp(Object.entries(TIME_MODES).map(([id, m]) => [id, m.name])),
+  "rhythm/r2": tp(Object.entries(PATTERN_TOPICS)),
+  "rhythm/r3": tp(Object.entries(GROOVE_TOPICS)),
   "arps/a1": tp(ARP_TRIADS),
   "arps/a2": tp(ARP_SEVENTHS),
   "technique/t1": tp([["chromatic", "크로매틱"], ["spider", "스파이더"], ["independence", "손가락 독립"], ["stretch", "넓혀 짚기"], ["shift", "자리 옮기기"]]),
@@ -329,8 +329,6 @@ const LEVEL_TOPICS = {
   "scales/mm": tp([["major", "메이저"], ["natural-minor", "내추럴 마이너"], ["harmonic-minor", "하모닉 마이너"], ["melodic-minor", "멜로딕 마이너"]]),
   "scales/md": tp(MODE_LIST),
   "scales/ct": tp([["maj", "메이저 코드톤"], ["min", "마이너 코드톤"], ["maj7", "maj7 코드톤"], ["dom7", "7 코드톤"], ["m7", "m7 코드톤"], ["m7b5", "m7♭5 코드톤"]]),
-  "rhythm/r1": tp([["4beat", "4비트"], ["8beat", "8비트"], ["16beat", "16비트"], ["accent", "악센트"], ["mute", "뮤트(칙)"], ["rest", "쉼표·끊어치기"], ["syncopation", "싱코페이션"], ["shuffle", "셔플"], ["genre", "장르별"]]),
-  "rhythm/r4": tp([["riff", "리프"], ["syncopation", "싱코페이션 프레이즈"], ["repeat-vary", "반복·변형"], ["chord-based", "코드 기반"], ["scale-based", "스케일 기반"]]),
   "ear/e2": tp([["2-3", "2·3도"], ["4-5", "4·5도"], ["6-7", "6·7도"], ["octave-compound", "옥타브·복합 음정"]]),
   "ear/e4": tp([["blues", "Blues"], ["rock", "Rock"], ["funk", "Funk"], ["jazz", "Jazz"]])
 };
@@ -347,10 +345,6 @@ const TASK_TOPICS = {
   "scales/md/chord-scale": tp([["251-modes", "ii–V–I 모드 전환"], ["1625-modes", "I–vi–ii–V 모드 전환"], ["dorian-vamp", "도리안 뱀프"], ["mixo-vamp", "믹솔리디안 뱀프"]]),
   "chords/c5/genre-comping": tp([["blues-shuffle", "블루스 셔플"], ["rock-8", "록 8비트"], ["funk-16", "펑크 16비트"], ["jazz-charleston", "재즈 스윙(찰스턴)"], ["jazz-4", "재즈 포 투 더 바"], ["bossa", "보사노바"], ["reggae", "레게 스캥크"], ["pop-strum", "팝 스트럼"]]),
   "chords/c5/chord-melody": tp([["ode-to-joy", "환희의 송가"], ["twinkle", "반짝반짝 작은 별"], ["jingle-bells", "징글벨 후렴"], ["frere-jacques", "프레르 자크"]]),
-  "rhythm/r2/comping": tp([["chord-rhythm", "코드 리듬"], ["cutting", "커팅"], ["mute", "뮤트"], ["syncopation", "싱코페이션"]]),
-  "rhythm/r2/fingerstyle": tp([["arpeggio", "아르페지오"], ["bass-chord", "베이스+코드(트래비스)"]]),
-  "rhythm/r2/percussive": tp([["body-hit", "바디 타격"], ["string-hit", "스트링 히트(슬랩)"], ["palm-mute", "팜뮤트"]]),
-  "rhythm/r1/rhythm-reading": tp([["4beat", "4비트"], ["8beat", "8비트"], ["16beat", "16비트"], ["accent", "악센트"], ["mute", "뮤트(칙)"], ["rest", "쉼표·끊어치기"], ["syncopation", "싱코페이션"], ["shuffle", "셔플"]]),
   "ear/e3/chord-ear": tp([["triads", "트라이어드 5종"], ["sevenths", "7th 5종"], ["tensions", "텐션"], ["progressions", "코드 진행"]]),
   "ear/e3/melodic": [],
   "ear/e3/harmonic": []

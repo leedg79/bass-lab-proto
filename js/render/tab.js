@@ -31,7 +31,7 @@ export function tabSvg(events, { chords = [], ticks = 48, active = -1 } = {}) {
     if (e.rest) { o += `<text x="${x}" y="${yOf((NUM_STRINGS + 1) / 2) + 5}" font-size="16" text-anchor="middle" fill="#5f6c80">·</text>`; prev = null; return; }
     const on = i === active;
     for (const n of e.notes) {
-      const y = yOf(n.s), label = String(n.f);
+      const y = yOf(n.s), label = e.ghost ? "x" : String(n.f);
       const bw = label.length > 1 ? 21 : 13;
       o += `<rect x="${x - bw / 2}" y="${y - 10}" width="${bw}" height="20" rx="3" fill="${on ? "#ffcf5c" : "#0f151f"}"/>`;
       o += `<text x="${x}" y="${y + 6}" font-size="17" font-weight="700" text-anchor="middle" fill="${on ? "#1d1600" : e.chrom ? "#ffb86b" : "#e7edf4"}" data-ev="${i}">${label}</text>`;

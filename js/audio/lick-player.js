@@ -1,4 +1,4 @@
-// 릭 재생: 이벤트(틱, 4분음표 = 12)를 기타 샘플로 연주. 셔플 릭은 8분음표 뒤쪽을 셋잇단 위치로
+// 릭 재생: 이벤트(틱, 4분음표 = 12)를 베이스 샘플로 연주. 셔플 릭은 8분음표 뒤쪽을 셋잇단 위치로
 import { unlockAudio, getAudioContext } from "./context.js";
 import { loadInstrument, playNote, masterOut } from "./sampler.js";
 import { drum } from "./drums.js";
@@ -14,7 +14,7 @@ export function stopLick() { timers.forEach(clearTimeout); timers = []; if (play
 export async function playLick(lick, bpm = 80, { onEvent, countIn = 0, click = false, silent = false, startAt = null, keep = false } = {}) {
   if (!keep) stopLick();
   await unlockAudio();
-  await loadInstrument("guitar");
+  await loadInstrument("bass");
   const ctx = getAudioContext();
   const spb = 60 / bpm;
   const pre = startAt != null ? startAt - countIn * spb : ctx.currentTime + 0.12;
@@ -36,7 +36,7 @@ export async function playLick(lick, bpm = 80, { onEvent, countIn = 0, click = f
         if (e.bend) opts.bend = e.bend;
         if (e.rel && prev && prev.bend) opts.release = prev.bend;
         if (e.sl && prev && !prev.rest) opts.slideFrom = TUNING[prev.notes[0].s - 1] + prev.notes[0].f;
-        const s = playNote("guitar", midi, t, dur, opts);
+        const s = playNote("bass", midi, t, dur, opts);
         if (s) srcs.push(s);
       }
     }
