@@ -5,6 +5,15 @@ import { scaleBoardSvg } from "../../render/scaleboard.js";
 import { getSetting, setSetting } from "../../core/storage.js";
 import { esc, makeStore, segHtml, bindPicker, readSel } from "./common.js";
 import * as D from "./drill-core.js";
+import { loadInstrument, playNote, masterOut } from "../../audio/sampler.js";
+import { unlockAudio, getAudioContext } from "../../audio/context.js";
+
+// 정답 음 차례로 듣기(베이스 음색)
+async function playMidis(midis) {
+  await unlockAudio(); await loadInstrument("bass");
+  const ctx = getAudioContext(), t0 = ctx.currentTime + 0.05;
+  midis.forEach((m, i) => playNote("bass", m, t0 + i * 0.34, 0.45, { gain: 0.8, out: masterOut(ctx) }));
+}
 
 // 공용 설정: 연습 구간, 제한시간
 export function regionTimeHtml(p) {
@@ -94,11 +103,17 @@ export function mountPromptDrill(container, api, opts) {
     const ans = $("#pdAnswer");
     if (c.revealed) {
       const changed = new Set(p.changed || []);
-      const marks = p.shape.map(n => ({ s: n.s, f: n.f, label: n.label, kind: changed.has(`${n.s}-${n.f}`) ? "changed" : n.root ? "root" : "note" }));
+      const marks = [
+        ...(p.ghost || []).map(n => ({ s: n.s, f: n.f, label: n.label, kind: n.root ? "ghostRoot" : "ghost" })),
+        ...p.shape.map(n => ({ s: n.s, f: n.f, label: n.label, kind: changed.has(`${n.s}-${n.f}`) ? "changed" : n.root ? "root" : "note" }))
+      ];
       ans.innerHTML = `
         <div class="answer-title">${esc(p.title)}${c.timedOut ? ' <span class="tag">시간 종료</span>' : ""}</div>
-        <div class="fretboard">${scaleBoardSvg(marks, { from: p.from, to: p.to })}</div>
-        <div class="answer-note">${esc(p.answer || "")}${changed.size ? " · 주황 = 앞 모드와 달라진 음" : ""} · 초록 = 근음</div>`;
+        <div class="fretboard">${scaleBoardSvg(marks, { from: p.from, to: p.to, path: p.path || null })}</div>
+        <div class="answer-note">${esc(p.answer || "")}${changed.size ? ` · 주황 = ${esc(opts.changedText || "앞 모드와 달라진 음")}` : ""} · 초록 = 근음${p.ghost && p.ghost.length ? " · 흐린 원 = 같은 자리의 다른 코드톤" : ""}</div>
+        ${p.midis ? '<button class="btn small" type="button" id="pdListen" style="margin-top:8px">소리 듣기(올라갔다 내려오기)</button>' : ""}`;
+      const lb = ans.querySelector("#pdListen");
+      if (lb) lb.onclick = () => playMidis(p.midis).catch(e => api.toast("소리를 켤 수 없음: " + e.message));
     } else {
       // 문제 중에는 구간만(음 표시 없음)
       let from = Math.max(0, p.region.lo - 1); if (from <= 1) from = 0;

@@ -27,6 +27,7 @@ import { renderLickEditor } from "./modules/licks/editor-view.js";
 import { loadMyLicks, mergeMyLicks } from "./modules/licks/my-licks.js";
 import { getFlags as getLickFlags } from "./modules/licks/lick-flags.js";
 import { renderJam } from "./modules/jam/jam-view.js";
+import { ArpFind, ArpQuality, ArpInversion, ArpTwoOctave, ArpFollow, renderArpDictionary } from "./modules/arps/arp-views.js";
 import { makePatternTask } from "./modules/rhythm/pattern-view.js";
 import { makeTechTask } from "./modules/technique/tech-view.js";
 import { makeEarTask } from "./modules/ear/ear-view.js";
@@ -35,7 +36,7 @@ import * as RhythmPhrase from "./modules/rhythm/phrase-view.js";
 import { strum, loadInstrument } from "./audio/sampler.js";
 import { unlockAudio } from "./audio/context.js";
 
-const APP_VERSION = "0.2.0";
+const APP_VERSION = "0.3.0";
 
 // 구현된 과제의 연습 화면 (모듈/과제 → 화면 모듈)
 // 화면 모듈: settingsHtml, bindSettings, readSettings, mount, clearFinder
@@ -71,9 +72,16 @@ const CONTENT = {
 };
 // 과제에 pending이 있으면(예: Scales 코드 전환하며 익히기) 아직 연습 화면 없음
 const TECH_TASKS = Object.fromEntries(["t1", "t2", "t3", "t4", "t5"].map(l => [l, makeTechTask(l)]));
+// Arpeggios: 레벨마다 다른 화면(찾기·종류 바꾸기)
+const ARP_CONTENT = {
+  "a1/arp-find": ArpFind.a1, "a2/arp-find": ArpFind.a2, "a3/arp-find": ArpFind.a3,
+  "a1/arp-quality": ArpQuality.a1, "a2/arp-quality": ArpQuality.a2,
+  "a3/arp-inversion": ArpInversion, "a3/arp-two-octave": ArpTwoOctave, "a4/arp-follow": ArpFollow
+};
 const contentFor = (mod, task, level) => {
+  if (mod === "arps") return ARP_CONTENT[`${level}/${task}`] || null;
   if (mod === "technique" && task === "drill") return TECH_TASKS[level] || null; const t = findTask(mod, level, task); return t && t.pending ? null : CONTENT[`${mod}/${task}`] || null; };
-function clearContent() { [...Object.values(CONTENT), ...Object.values(TECH_TASKS)].forEach(c => c.clearFinder && c.clearFinder()); }
+function clearContent() { [...Object.values(CONTENT), ...Object.values(TECH_TASKS), ...Object.values(ARP_CONTENT)].forEach(c => c.clearFinder && c.clearFinder()); }
 
 // ───────────── 공용 도우미 ─────────────
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -269,7 +277,7 @@ function renderHome() {
           <span class="meta">${m.levels.length} LEVELS</span>
         </button>`).join("")}
     </div>
-    <p class="muted small" style="margin:12px 2px 14px">Arpeggios · Bass Lines · Rhythm · Technique는 베이스용으로 바꿔 차례로 추가할 예정임</p>
+    <p class="muted small" style="margin:12px 2px 14px">Bass Lines · Rhythm · Technique는 베이스용으로 바꿔 차례로 추가할 예정임</p>
     <div class="tool-row">
       <button class="tool-card" type="button" data-go="jam">${ICON.jam}<div><b>백킹 트랙</b><span>드럼·코드 반주(베이스 빠짐)</span></div></button>
       <button class="tool-card" type="button" data-go="journal">${ICON.journal}<div><b>학습일지</b><span>연·월·일 기록</span></div></button>
@@ -362,6 +370,19 @@ function renderTask(modId, lvlId, taskId) {
       </div>`;
     if (taskId === "my-edit") onCleanup(renderLickEditor($("#lickArea"), { toast, ask }));
     else renderLickList($("#lickArea"), { level: lvlId, toast, ask });
+    return m.name;
+  }
+  if (t.reference && modId === "arps") {
+    view.innerHTML = `
+      <div class="session-layout">
+        <div class="panel session-head span-all">
+          <div class="crumbs">${esc(m.name)} · ${esc(l.name)}</div>
+          <h1>${esc(t.name)}</h1>
+          <div class="tag-row"><span class="tag">참고 기능 · 기록 없음</span></div>
+        </div>
+        <div class="span-all" id="dictArea" style="display:grid;gap:14px"></div>
+      </div>`;
+    renderArpDictionary($("#dictArea"), { level: lvlId, toast });
     return m.name;
   }
   if (t.reference && modId === "chords") {

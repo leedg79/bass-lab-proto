@@ -108,8 +108,38 @@ const PLAY_TASKS = [
 ];
 
 // 베이스 앱으로 옮긴 모듈만 보여 줌. 나머지는 단계별로 베이스용으로 바꾼 뒤 추가함
-const READY = { notes: null, scales: null, ear: ["e1", "e2", "e3"] };
+const READY = { notes: null, arps: null, scales: null, ear: ["e1", "e2", "e3"] };
+// Arpeggios(기타 앱의 Chords 자리): 레벨 = 코드 묶음, 과제 = 찾기 → 종류 바꾸기 → 전위·2옥타브 → 진행 위 따라가기
+const ARP_FIND = { id: "arp-find", name: "아르페지오 찾기 · Arpeggio Finder", type: "finding", unit: { kind: "count", size: 12, label: "근음 12개 = 1회" } };
+const ARP_QUALITY = { id: "arp-quality", name: "코드 종류 바꾸기 · Quality Switch", type: "finding", unit: { kind: "cycle", size: 0, label: "고른 종류 1순환 = 1회" } };
+const ARP_DICT = { id: "arp-dict", name: "아르페지오 사전 · Arpeggio Dictionary", type: "reference", unit: UNIT.none, reference: true };
+
 const ALL_MODULES = [
+  {
+    id: "arps",
+    name: "Arpeggios",
+    sub: "코드톤 · 아르페지오",
+    stage: 3,
+    levels: [
+      { id: "a1", name: "A1 Triads", desc: "메이저·마이너·디미니시드·어그먼티드·서스4 트라이어드 아르페지오", tasks: [ARP_FIND, ARP_QUALITY, ARP_DICT] },
+      { id: "a2", name: "A2 7th Chords", desc: "maj7·7·m7·m7♭5·dim7·6·m6·m(maj7) 아르페지오", tasks: [ARP_FIND, ARP_QUALITY, ARP_DICT] },
+      {
+        id: "a3", name: "A3 Inversions · 2 Octaves · 9th", desc: "3음·5음·7음부터 치기, 4번 줄 근음 2옥타브, 9th 아르페지오",
+        tasks: [
+          { id: "arp-inversion", name: "전위로 치기 · Inversions", type: "finding", unit: { kind: "count", size: 12, label: "12문제 = 1회" } },
+          { id: "arp-two-octave", name: "2옥타브 · Two Octaves", type: "finding", unit: { kind: "count", size: 6, label: "근음 6개 = 1회" } },
+          { ...ARP_FIND, name: "9th 아르페지오 찾기 · 9th Arpeggios" }
+        ]
+      },
+      {
+        id: "a4", name: "A4 Apply", desc: "반주 진행 위에서 마디마다 코드톤 따라가기(근음·5음·3음·7음 패턴)",
+        tasks: [
+          { id: "arp-follow", name: "진행 위 코드톤 따라가기 · Chord-Tone Follow", type: "play", unit: { kind: "mission", size: 1, label: "진행 2바퀴 = 1회" } },
+          { ...ARP_DICT }
+        ]
+      }
+    ]
+  },
   {
     id: "notes",
     name: "Notes",
@@ -228,7 +258,8 @@ const ALL_MODULES = [
   }
 ];
 
-export const MODULES = ALL_MODULES.filter(m => m.id in READY).map(m => (READY[m.id] ? { ...m, levels: m.levels.filter(l => READY[m.id].includes(l.id)) } : m));
+const ORDER = ["notes", "arps", "scales", "lines", "rhythm", "technique", "ear"];
+export const MODULES = ALL_MODULES.filter(m => m.id in READY).sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)).map(m => (READY[m.id] ? { ...m, levels: m.levels.filter(l => READY[m.id].includes(l.id)) } : m));
 
 export function findModule(moduleId) {
   return MODULES.find(m => m.id === moduleId) || null;
@@ -275,7 +306,14 @@ const tp = list => list.map(([id, name]) => ({ id, name }));
 
 const MODE_LIST = [["ionian", "Ionian"], ["dorian", "Dorian"], ["phrygian", "Phrygian"], ["lydian", "Lydian"], ["mixolydian", "Mixolydian"], ["aeolian", "Aeolian"], ["locrian", "Locrian"]];
 
+const ARP_TRIADS = [["maj", "메이저"], ["min", "마이너"], ["dim", "디미니시드"], ["aug", "어그먼티드"], ["sus4", "서스4"]];
+const ARP_SEVENTHS = [["maj7", "maj7"], ["dom7", "7(도미넌트)"], ["m7", "m7"], ["m7b5", "m7♭5"], ["dim7", "dim7"], ["6", "6"], ["m6", "m6"], ["mmaj7", "m(maj7)"]];
+const ARP_CORE = [["maj", "메이저"], ["min", "마이너"], ["maj7", "maj7"], ["dom7", "7(도미넌트)"], ["m7", "m7"], ["m7b5", "m7♭5"]];
+const FOLLOW_PROGS = [["blues12", "12마디 블루스"], ["minor-blues", "마이너 블루스"], ["pop", "팝 I–V–vi–IV"], ["rock", "록 I–♭VII–IV–I"], ["major251", "메이저 ii–V–I"], ["minor251", "마이너 ii–V–i"], ["1625", "I–vi–ii–V"], ["dorian-vamp", "도리안 뱀프"], ["mixo-vamp", "믹솔리디안 뱀프"]];
+
 const LEVEL_TOPICS = {
+  "arps/a1": tp(ARP_TRIADS),
+  "arps/a2": tp(ARP_SEVENTHS),
   "technique/t1": tp([["chromatic", "크로매틱"], ["spider", "스파이더"], ["independence", "손가락 독립"], ["stretch", "넓혀 짚기"], ["shift", "자리 옮기기"]]),
   "technique/t2": tp([["half-bend", "반음 벤딩"], ["whole-bend", "온음 벤딩"], ["release", "벤딩 섞기"], ["vibrato", "비브라토"]]),
   "technique/t3": tp([["alternate", "얼터네이트"], ["crossing", "줄 넘기"], ["skipping", "스트링 스킵"], ["economy", "이코노미"], ["tremolo", "트레몰로"], ["chord-tone", "코드톤 피킹"], ["scale", "스케일 피킹"]]),
@@ -298,6 +336,12 @@ const LEVEL_TOPICS = {
 };
 
 const TASK_TOPICS = {
+  "arps/a1/arp-dict": [],
+  "arps/a2/arp-dict": [],
+  "arps/a3/arp-inversion": tp(ARP_CORE),
+  "arps/a3/arp-two-octave": tp(ARP_CORE),
+  "arps/a3/arp-find": tp([["maj9", "maj9"], ["dom9", "9(도미넌트)"], ["m9", "m9"]]),
+  "arps/a4/arp-follow": tp(FOLLOW_PROGS),
   "scales/pb/chord-scale": tp([["blues-minor", "12마디 블루스 · 마이너 펜타 유지"], ["blues-chord", "12마디 블루스 · 코드마다 메이저 펜타"], ["minor-blues", "마이너 블루스"], ["pop-major", "팝 I–V–vi–IV"]]),
   "scales/mm/chord-scale": tp([["major251", "메이저 ii–V–I"], ["1625", "I–vi–ii–V"], ["minor251", "마이너 ii–V–i(내추럴↔하모닉)"], ["minor-blues-nm", "마이너 블루스"]]),
   "scales/md/chord-scale": tp([["251-modes", "ii–V–I 모드 전환"], ["1625-modes", "I–vi–ii–V 모드 전환"], ["dorian-vamp", "도리안 뱀프"], ["mixo-vamp", "믹솔리디안 뱀프"]]),
