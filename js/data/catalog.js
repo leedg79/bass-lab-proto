@@ -108,7 +108,7 @@ const PLAY_TASKS = [
 ];
 
 // 베이스 앱으로 옮긴 모듈만 보여 줌. 나머지는 단계별로 베이스용으로 바꾼 뒤 추가함
-const READY = { notes: null, ear: ["e1", "e2", "e3"] };
+const READY = { notes: null, scales: null, ear: ["e1", "e2", "e3"] };
 const ALL_MODULES = [
   {
     id: "notes",

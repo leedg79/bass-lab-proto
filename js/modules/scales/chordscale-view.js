@@ -108,6 +108,7 @@ export function mount(container, api) {
         onBeat: (bb, counting, left) => { if (counting) $("#csState").textContent = `준비 ${left}`; }
       });
       setPartLevel("comp", 0.5);
+      setPartLevel("bass", 0);   // 베이스 파트는 끄고 내가 스케일로 베이스 자리를 채움
       playing = true; $("#csPlay").textContent = "멈춤"; draw();
     } catch (e) { api.toast("소리를 켤 수 없음: " + e.message); $("#csPlay").textContent = "반주 시작"; }
   }

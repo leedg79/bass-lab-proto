@@ -1,6 +1,6 @@
 // 블록 학습·블록 전환 진행 규칙 (순수 함수)
 
-import { connectPath, neckOrder } from "../../theory/scales.js";
+import { connectPath, neckOrder, SCALES } from "../../theory/scales.js";
 
 export const COUNT_IN = 4;
 export const BPM_MIN = 40, BPM_MAX = 200, BPM_DEFAULT = 60;
@@ -24,7 +24,11 @@ export const SHAPES = [["up", "상행"], ["down", "하행"], ["updown", "왕복(
 // picks: 경로마다 블록을 바꿀 줄 조합 번호(무작위로 정해 저장해 두면 이어하기 때도 같은 경로)
 export function makePicks(n, rand = Math.random) { return Array.from({ length: n }, () => Math.floor(rand() * 4)); }
 
+// 4현에서 코드톤(3~4음)은 블록에 음이 적어 블록 3개를 슬라이드 두 번으로 잇는 경로가 안 나오는 경우가 많음 → 2개로 연결
+export const maxBlocks = scaleId => (SCALES[scaleId] && SCALES[scaleId].chord ? 2 : 3);
+
 export function transitionCycle(rootPc, scaleId, count = 2, shape = "up", perBeat = 1, picks = []) {
+  count = Math.min(count, maxBlocks(scaleId));
   const n = neckOrder(rootPc, scaleId).length;
   const runs = [];
   for (let i = 0; i + count <= n; i++) {

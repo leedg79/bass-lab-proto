@@ -1,8 +1,9 @@
 // 스케일 공식과 지판 블록·포지션 (화면과 무관)
-// 블록(5개): 지판 위치 구간. 펜타토닉은 줄당 2음 박스, 7음계·코드톤은 같은 구간(펜타토닉 박스의 프렛 범위) 안의 음
-// 포지션(7개, Modes): 시작음 기준 줄당 3음(3NPS)
+// 베이스 4현 기준. 블록(5개): 지판 위치 구간. 펜타토닉은 줄당 2음 박스(4줄 × 2음 = 8음),
+// 7음계·코드톤은 같은 구간(박스 프렛 범위, 왼손 한 자리 = 1손가락 1프렛 범위) 안의 음
+// 포지션(7개, Modes): 시작음 기준 줄당 3음(3NPS, 4줄 × 3음 = 12음)
 
-import { TUNING } from "./notes.js";
+import { TUNING, NUM_STRINGS, LOWEST } from "./notes.js";
 
 const mod = n => ((n % 12) + 12) % 12;
 
@@ -60,10 +61,10 @@ export function scalePcs(rootPc, scaleId) {
   return SCALES[scaleId].steps.map(s => mod(rootPc + s));
 }
 
-const MIDI_OPEN = TUNING; // 1번현..6번현
+const MIDI_OPEN = TUNING; // 1번현(G)..4번현(E)
 const MAX = 17;
 
-// 낮은 음부터(6번 현 → 1번 현) 정렬
+// 낮은 음부터(4번 현 → 1번 현) 정렬
 const order = (a, b) => (b.s - a.s) || (a.f - b.f);
 
 function noteAt(s, f, rootPc, scaleId) {
@@ -71,12 +72,12 @@ function noteAt(s, f, rootPc, scaleId) {
   return { s, f, midi, label: degreeOf(midi - rootPc, scaleId), root: mod(midi - rootPc) === 0 };
 }
 
-// 줄당 n음 패턴: 6번 현의 startFret 음부터 스케일 음을 차례로 n개씩
+// 줄당 n음 패턴: 가장 굵은 줄의 startFret 음부터 스케일 음을 차례로 n개씩
 function nps(rootPc, steps, startFret, perString) {
   const pcs = new Set(steps.map(s => mod(rootPc + s)));
   const out = [];
-  let midi = MIDI_OPEN[5] + startFret;
-  for (let s = 6; s >= 1; s--) {
+  let midi = MIDI_OPEN[LOWEST - 1] + startFret;
+  for (let s = LOWEST; s >= 1; s--) {
     const open = MIDI_OPEN[s - 1];
     for (let k = 0; k < perString; k++) {
       while (!pcs.has(mod(midi))) midi++;
@@ -87,9 +88,9 @@ function nps(rootPc, steps, startFret, perString) {
   return out;
 }
 
-// 펜타토닉 박스 5개의 시작 프렛(6번 현): 근음부터 스케일 음 차례로, 0~12 사이로
+// 펜타토닉 박스 5개의 시작 프렛(4번 현): 근음부터 스케일 음 차례로, 0~12 사이로
 function boxStarts(rootPc, steps) {
-  const r = mod(rootPc - MIDI_OPEN[5]);
+  const r = mod(rootPc - MIDI_OPEN[LOWEST - 1]);
   return steps.map(st => {
     let f = r + st;
     while (f > 12) f -= 12;
@@ -120,17 +121,40 @@ export function blocks(rootPc, scaleId) {
       // 박스의 프렛 구간 안에서 이 스케일(또는 코드톤) 음 전부
       const lo = Math.min(...box.map(n => n.f)), hi = Math.max(...box.map(n => n.f));
       notes = [];
-      for (let s = 6; s >= 1; s--) for (let f = Math.max(0, lo - (sc.chord ? 0 : 1)); f <= hi; f++) {
+      for (let s = LOWEST; s >= 1; s--) for (let f = Math.max(0, lo - (sc.chord ? 0 : 1)); f <= hi; f++) {
         if (pcs.has(mod(MIDI_OPEN[s - 1] + f))) notes.push({ s, f });
       }
       // 7음계: 줄마다 낮은 쪽 확장 음은 같은 줄에 3음을 넘을 때만 뺌
       if (!sc.chord) notes = trimPerString(notes, lo, 3);
       notes = dedupePitch(notes, lo, hi);
+      notes = fillMissing(notes, pcs, lo, hi);
     }
     const list = notes.map(n => noteAt(n.s, n.f, rootPc, scaleId)).sort(order);
     const fr = list.map(n => n.f);
     return { index: i + 1, name: `블록 ${i + 1}`, notes: list, lo: Math.min(...fr), hi: Math.max(...fr) };
   }).sort((a, b) => a.index - b.index);
+}
+
+// 4현은 박스 구간이 좁아 7음계·코드톤의 한두 음이 구간 밖에 걸릴 수 있음
+// → 빠진 음은 구간 바로 바깥(±2프렛)에서 손이 덜 움직이는 자리 하나로 채움(4줄 × 4~5프렛 안)
+function fillMissing(notes, pcs, lo, hi) {
+  const have = new Set(notes.map(n => mod(MIDI_OPEN[n.s - 1] + n.f)));
+  const used = new Set(notes.map(n => MIDI_OPEN[n.s - 1] + n.f));
+  const out = [...notes];
+  for (const pc of pcs) {
+    if (have.has(pc)) continue;
+    let best = null;
+    for (let s = LOWEST; s >= 1; s--) for (let f = Math.max(0, lo - 2); f <= Math.min(MAX, hi + 2); f++) {
+      const m = MIDI_OPEN[s - 1] + f;
+      if (mod(m) !== pc || used.has(m)) continue;
+      const dist = f < lo ? lo - f : f > hi ? f - hi : 0;
+      const crowd = out.filter(n => n.s === s).length;
+      const cost = dist * 2 + crowd;
+      if (!best || cost < best.cost) best = { s, f, cost };
+    }
+    if (best) { out.push({ s: best.s, f: best.f }); used.add(MIDI_OPEN[best.s - 1] + best.f); have.add(pc); }
+  }
+  return out;
 }
 
 // 같은 음높이가 두 줄에 있으면 구간 안쪽 → 낮은 줄(굵은 줄) 쪽만 남김
@@ -147,7 +171,7 @@ function dedupePitch(notes, lo, hi) {
 
 function trimPerString(notes, lo, maxPer) {
   const out = [];
-  for (let s = 6; s >= 1; s--) {
+  for (let s = LOWEST; s >= 1; s--) {
     let row = notes.filter(n => n.s === s);
     while (row.length > maxPer && row[0].f < lo) row = row.slice(1);
     out.push(...row);
@@ -158,7 +182,7 @@ function trimPerString(notes, lo, maxPer) {
 // 모드 포지션 k (1~7): 모드 k번째 음에서 시작하는 줄당 3음
 export function positions(rootPc, scaleId) {
   const steps = SCALES[scaleId].steps;
-  const r = mod(rootPc - MIDI_OPEN[5]);
+  const r = mod(rootPc - MIDI_OPEN[LOWEST - 1]);
   return steps.map((st, i) => {
     let start = r + st;
     while (start > 12) start -= 12;
@@ -193,7 +217,7 @@ function poolOf(bs, rootPc, scaleId) {
   const inBlock = new Set(bs.flatMap(b => b.notes.map(n => n.s + "-" + n.f)));
   const pcs = new Set(scalePcs(rootPc, scaleId));
   const pool = [];
-  for (let s = 1; s <= 6; s++) for (let f = Math.max(0, lo - 1); f <= hi + 1; f++) {
+  for (let s = 1; s <= NUM_STRINGS; s++) for (let f = Math.max(0, lo - 1); f <= hi + 1; f++) {
     const m = MIDI_OPEN[s - 1] + f;
     if (pcs.has(mod(m))) pool.push({ s, f, midi: m, inBlock: inBlock.has(s + "-" + f) });
   }
@@ -213,8 +237,8 @@ function routeShift(seq, ks, up, pool = null) {
   for (const b of seq) for (const n of b.notes) all.set(key(n), { s: n.s, f: n.f, midi: MIDI_OPEN[n.s - 1] + n.f });
   if (pool) for (const p of pool) if (!all.has(key(p))) all.set(key(p), { s: p.s, f: p.f, midi: p.midi });
   const first = seq[0], last = seq[seq.length - 1];
-  const startN = up ? first.notes.filter(n => n.s === 6).sort((x, y) => x.f - y.f)[0] : first.notes.filter(n => n.s === 1).sort((x, y) => y.f - x.f)[0];
-  const endN = up ? last.notes.filter(n => n.s === 1).sort((x, y) => y.f - x.f)[0] : last.notes.filter(n => n.s === 6).sort((x, y) => x.f - y.f)[0];
+  const startN = up ? first.notes.filter(n => n.s === LOWEST).sort((x, y) => x.f - y.f)[0] : first.notes.filter(n => n.s === 1).sort((x, y) => y.f - x.f)[0];
+  const endN = up ? last.notes.filter(n => n.s === 1).sort((x, y) => y.f - x.f)[0] : last.notes.filter(n => n.s === LOWEST).sort((x, y) => x.f - y.f)[0];
   if (!startN || !endN) return null;
   const sm = MIDI_OPEN[startN.s - 1] + startN.f, em = MIDI_OPEN[endN.s - 1] + endN.f;
   const pitches = [...new Set([...all.values()].map(p => p.midi))]
@@ -257,18 +281,18 @@ function routeShift(seq, ks, up, pool = null) {
   return out.reverse();
 }
 
-// 바꿀 줄 후보: 블록 2개 = 4·3·5·2번 줄, 블록 3개 = (5·4번 줄, 3·2번 줄) 조합
+// 바꿀 줄 후보(4현): 블록 2개 = 3·2·4·1번 줄, 블록 3개 = (4·3번 줄, 2·1번 줄) 조합
 const SWITCH_SETS = {
-  2: [[4], [3], [5], [2]],
-  3: [[5, 3], [4, 2], [5, 2], [4, 3], [5, 4], [3, 2]]
+  2: [[3], [2], [4], [1]],
+  3: [[3, 2], [4, 2], [3, 1], [4, 3], [2, 1], [4, 1]]
 };
 function routeAny(seq, up, prefer, pool) {
   const base = SWITCH_SETS[seq.length] || [[]];
   const opts = up ? base : base.map(o => [...o].reverse());
   // 마지막 수단: 모든 줄 조합(같은 줄에서 두 번 바꾸는 경우 포함)
   const extra = [];
-  if (seq.length === 2) for (const k of [6, 1]) extra.push([k]);
-  if (seq.length === 3) for (let a = 6; a >= 1; a--) for (let b = a; b >= 1; b--) extra.push(up ? [a, b] : [b, a]);
+  if (seq.length === 2) for (const k of [LOWEST, 1]) extra.push([k]);
+  if (seq.length === 3) for (let a = LOWEST; a >= 1; a--) for (let b = a; b >= 1; b--) extra.push(up ? [a, b] : [b, a]);
   const seen = new Set();
   const order = [...(prefer ? [prefer] : []), ...opts, ...extra].filter(o => !seen.has(o.join()) && seen.add(o.join()));
   // 1차: 블록 운지만 / 2차: 블록 근처 음까지 허용

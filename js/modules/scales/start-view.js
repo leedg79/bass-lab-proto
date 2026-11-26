@@ -1,7 +1,8 @@
-// S3 Start Note: "D 도리안, 6번 줄 G에서 시작"처럼 지정한 음(또는 도수)에서 한 옥타브 오르내리기
+// S3 Start Note: "D 도리안, 4번 줄 G에서 시작"처럼 지정한 음(또는 도수)에서 한 옥타브 오르내리기
 // 제한시간이 지나거나 정답 확인을 누르면 경로와 "이렇게 치면 어떤 스케일과 같은 음 배열인지" 공개
 // 스케일의 모든 음에서 한 번씩 시작 = 완료 1회
 
+import { stringLabel } from "../../theory/notes.js";
 import * as D from "./drill-core.js";
 import { scaleTitle, SCALES } from "../../theory/scales.js";
 import { scaleBoardSvg } from "../../render/scaleboard.js";
@@ -16,7 +17,7 @@ export function settingsHtml() {
   return `
     <div class="field"><label>키</label>${keyPickerHtml("stnKey", "stn.key")}</div>
     <div class="field" style="margin-top:14px"><label>지시 방식</label>${segHtml("stnLevel", D.START_LEVELS, getSetting("stn.level", "easy"))}
-      <p class="muted small" style="margin:6px 0 0">줄 + 음 이름: "6번 줄 G에서" / 줄 + 도수: "6번 줄 4도음에서"(어떤 음인지 직접 떠올림)</p></div>
+      <p class="muted small" style="margin:6px 0 0">줄 + 음 이름: "4번 줄(E) G에서" / 줄 + 도수: "4번 줄(E) 4도음에서"(어떤 음인지 직접 떠올림)</p></div>
     ${regionTimeHtml("stn")}
     <p class="muted small" style="margin:4px 0 0">시작음(구간 안)에서 같은 블록 안으로 한 옥타브 올라갔다 내려오기(위쪽이 블록을 벗어나면 내려갔다 올라오기). 스케일의 모든 음에서 한 번씩 시작하면 완료 1회</p>`;
 }
@@ -91,7 +92,7 @@ export function mount(container, api) {
     const dirText = p.up ? "한 옥타브 올라갔다 내려오기" : "한 옥타브 내려갔다 올라오기";
     $("#stnScale").textContent = scaleTitle(p.rootPc, p.scaleId);
     $("#stnMain").textContent = level === "hard" ? (p.degree === "R" ? "근음" : `${p.degree}도음`) : p.noteName;
-    $("#stnSub").textContent = `${p.s}번 줄에서 · ${dirText}${p.region ? ` · ${p.region.label}` : ""}`;
+    $("#stnSub").textContent = `${stringLabel(p.s)}에서 · ${dirText}${p.region ? ` · ${p.region.label}` : ""}`;
     $("#stnReveal").classList.toggle("hidden", c.revealed);
     $("#stnNext").classList.toggle("hidden", !c.revealed);
     const ans = $("#stnAnswer");
@@ -109,7 +110,7 @@ export function mount(container, api) {
         : p.semi === 0 ? "근음에서 시작" : p.related ? `이 음 배열은 ${p.related}와 같음` : "";
       const half = Math.ceil(p.notes.length / 2);
       ans.innerHTML = `
-        <div class="answer-title">${esc(p.noteName)} = ${esc(p.degree === "R" ? "근음" : p.degree + "도")} · ${p.s}번 줄 ${p.f}프렛${c.timedOut ? ' <span class="tag">시간 종료</span>' : ""}</div>
+        <div class="answer-title">${esc(p.noteName)} = ${esc(p.degree === "R" ? "근음" : p.degree + "도")} · ${stringLabel(p.s)} ${p.f}프렛${c.timedOut ? ' <span class="tag">시간 종료</span>' : ""}</div>
         <div class="fretboard">${scaleBoardSvg(marks, { from, to, path: p.notes.slice(0, half) })}</div>
         <div class="answer-note">${esc(rel)}${rel ? " · " : ""}노랑 = 시작음, 파란 선 = ${p.up ? "올라가는" : "내려가는"} 경로(돌아올 때는 거꾸로), 흐린 원 = 같은 블록의 나머지 음</div>
         <div class="st-run">${p.notes.slice(0, half).map(n => `<span>${esc(n.label)}</span>`).join("")}</div>`;

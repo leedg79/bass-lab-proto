@@ -4,6 +4,7 @@
 //   root·hide는 구간 끝에 확인 마디 1개를 붙여 정답 모양을 보여 줌
 // 모든 구간을 마치면 완료 1회, 다음 사이클로 쉬지 않고 이어감
 
+import { stringLabel } from "../../theory/notes.js";
 import * as BC from "./block-core.js";
 import { scaleBoardSvg } from "../../render/scaleboard.js";
 import { setSetting } from "../../core/storage.js";
@@ -93,7 +94,7 @@ export function mountSegPlayer(container, api, opts) {
     if (checking) info = `확인 · ${sg.prompt} 모양${nextSg ? ` · 다음: ${nextSg.prompt}` : ""}`;
     else if (live && slot.note >= 0) {
       const n = sg.notes[slot.note];
-      info = hint === "all" ? `${n.s}번 현 ${n.f}프렛 · ${n.label} · ${slot.note + 1}/${sg.notes.length}음` : `${slot.note + 1}/${sg.notes.length}음`;
+      info = hint === "all" ? `${stringLabel(n.s)} ${n.f}프렛 · ${n.label} · ${slot.note + 1}/${sg.notes.length}음` : `${slot.note + 1}/${sg.notes.length}음`;
     } else if (live && slot.note === -1) info = nextSg && hint === "all" ? `다음: ${nextSg.prompt}` : "쉼";
     else info = `${sg.notes.length}음`;
     $("#spInfo").textContent = info;

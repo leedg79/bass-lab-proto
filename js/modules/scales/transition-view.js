@@ -2,6 +2,7 @@
 // 블록 1에서 시작해 중간 줄에서 슬라이드로 다음 블록으로 넘어감(블록 3개면 두 번). 바꾸는 줄은 경로마다 무작위
 // 지판 위치 순서로 모든 경로(1→2, 2→3 …)를 마치면 완료 1회
 
+import { stringLabel } from "../../theory/notes.js";
 import * as BC from "./block-core.js";
 import { scaleTitle, SCALES } from "../../theory/scales.js";
 import { scaleBoardSvg } from "../../render/scaleboard.js";
@@ -26,7 +27,7 @@ export function settingsHtml() {
       <label for="sbtBpm">BPM <b id="sbtBpmOut">${bpm}</b></label>
       <input id="sbtBpm" type="range" min="${BC.BPM_MIN}" max="${BC.BPM_MAX}" step="1" value="${bpm}">
     </div>
-    <p class="muted small" style="margin:4px 0 0">블록 1에서 시작해 중간 줄에서 슬라이드로 다음 블록으로 넘어가며 스케일을 같은 음 반복 없이 연속 연주(블록 3개면 두 번 넘어감). 넘어가는 줄은 경로마다 달라짐. 지판 아래쪽 경로부터 차례로, 모든 경로를 마치면 완료 1회</p>`;
+    <p class="muted small" style="margin:4px 0 0">블록 1에서 시작해 중간 줄에서 슬라이드로 다음 블록으로 넘어가며 스케일을 같은 음 반복 없이 연속 연주(블록 3개면 두 번 넘어감, 코드톤은 블록 2개까지). 넘어가는 줄은 경로마다 달라짐. 지판 아래쪽 경로부터 차례로, 모든 경로를 마치면 완료 1회</p>`;
 }
 export function bindSettings(root) {
   ["sbtKey", "sbtCount", "sbtDir", "sbtPer"].forEach(id => bindPicker(root, id));
@@ -111,7 +112,7 @@ export function mount(container, api) {
     const shapeWord = { up: "상행", down: "하행", updown: "왕복" }[shape];
     const sl = run.notes.filter(n => n.slide).map(n => `${n.s}번`);
     $("#sbtInfo").textContent = act
-      ? `${act.s}번 현 ${act.f}프렛 · ${act.label}${act.slide ? " · 슬라이드" : ""} · ${activeIdx + 1}/${run.notes.length}음`
+      ? `${stringLabel(act.s)} ${act.f}프렛 · ${act.label}${act.slide ? " · 슬라이드" : ""} · ${activeIdx + 1}/${run.notes.length}음`
       : `${word} ${run.label} · ${shapeWord} · ${sl.join("·")} 줄에서 슬라이드 · ${run.notes.length}음`;
   }
   function drawCap(inBar) {

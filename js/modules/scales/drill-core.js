@@ -4,7 +4,7 @@
 // 시작음 바꿔 치기: 지정한 줄·음(또는 도수)에서 한 옥타브 오르내리기
 
 import { SCALES, KEY_LIST, blocks, positions, sequence, scalePcs, keyName, scaleTitle, degreeOf } from "../../theory/scales.js";
-import { TUNING } from "../../theory/notes.js";
+import { TUNING, LOWEST } from "../../theory/notes.js";
 
 const mod = n => ((n % 12) + 12) % 12;
 const NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
@@ -65,13 +65,36 @@ export function modeOrder(modeIds, order, rand = Math.random) {
 
 // ── S3 ──
 // 시작음에서 한 옥타브 오르내리는(또는 내리고 오르는) 경로. 시작음이 들어 있는 블록 안에서만
+// 4현은 블록이 좁아 하모닉·멜로딕 마이너의 7음처럼 블록에 한 번만 있는 음에서는 한 옥타브가 안 나옴
+// → 블록 안에서 못 찾으면 블록 구간 ±1프렛까지 넓힌 모양에서 찾음
+function widenBlock(b, rootPc, scaleId) {
+  const pcs = new Set(SCALES[scaleId].steps.map(x => mod(rootPc + x)));
+  const inside = new Set(b.notes.map(x => x.s + "-" + x.f));
+  const by = new Map();
+  for (let s = LOWEST; s >= 1; s--) for (let f = Math.max(0, b.lo - 1); f <= Math.min(17, b.hi + 1); f++) {
+    const midi = TUNING[s - 1] + f;
+    if (!pcs.has(mod(midi))) continue;
+    const cand = { s, f, midi, label: degreeOf(midi - rootPc, scaleId), root: mod(midi - rootPc) === 0, inside: inside.has(s + "-" + f) };
+    const cur = by.get(midi);
+    if (!cur || (cand.inside && !cur.inside) || (cand.inside === cur.inside && cand.s > cur.s)) by.set(midi, cand);
+  }
+  const notes = [...by.values()].map(({ inside: _, ...x }) => x).sort((a, c) => (c.s - a.s) || (a.f - c.f));
+  const fr = notes.map(x => x.f);
+  return { ...b, notes, lo: Math.min(...fr), hi: Math.max(...fr) };
+}
+
 export function octaveRun(rootPc, scaleId, s, f) {
+  return octaveRunIn(rootPc, scaleId, s, f, false) || octaveRunIn(rootPc, scaleId, s, f, true);
+}
+
+function octaveRunIn(rootPc, scaleId, s, f, wide) {
   const n = SCALES[scaleId].steps.length;
   const m = TUNING[s - 1] + f;
   let best = null;
   const all = [];
   for (const b0 of blocks(rootPc, scaleId)) for (const d of [-12, 0, 12]) if (b0.lo + d >= 0 && b0.hi + d <= 17) all.push(d ? shiftBlock(b0, d) : b0);
-  for (const b of all) {
+  for (const b1 of all) {
+    const b = wide ? widenBlock(b1, rootPc, scaleId) : b1;
     if (!b.notes.some(x => x.s === s && x.f === f)) continue;
     const byMidi = new Map(b.notes.map(x => [x.midi, x]));
     for (const up of [true, false]) {
@@ -109,18 +132,27 @@ export function startDeck(rootPc, scaleId, rand = Math.random, regionId = null) 
   return steps.map(semi => {
     const pc = mod(rootPc + semi);
     const region = regionId ? regionRange(regionId, rand) : null;
-    const collect = (maxF, avoid, inRegion) => {
+    const collect = (maxF, avoid, inRegion, slack = 2) => {
       const out = [];
-      for (let s = 6; s >= 1; s--) for (let f = 0; f <= maxF; f++) {
+      for (let s = LOWEST; s >= 1; s--) for (let f = 0; f <= maxF; f++) {
         if (inRegion && (f < region.lo || f > region.hi)) continue;
         if (mod(TUNING[s - 1] + f) !== pc || s === avoid) continue;
         const run = octaveRun(rootPc, scaleId, s, f);
-        if (run && (!inRegion || (run.block.lo >= region.lo - 2 && run.block.hi <= region.hi + 2))) out.push({ s, f, run, w: s >= 4 ? 2 : 1 });
+        if (run && (!inRegion || (run.block.lo >= region.lo - slack && run.block.hi <= region.hi + slack))) out.push({ s, f, run, w: s >= 3 ? 2 : 1 });
       }
       return out;
     };
     let opts = region ? collect(17, lastString, true) : [];
     if (!opts.length && region) opts = collect(17, 0, true);
+    // 4현은 구간 안 시작음에서 한 옥타브가 구간 ±2프렛을 넘는 경우가 있어 모양 범위를 조금 더 허용
+    if (!opts.length && region) opts = collect(17, 0, true, 5);
+    if (!opts.length && region) opts = collect(17, 0, true, 17);
+    // 구간 안에서는 그 음으로 한 옥타브를 칠 수 없음(예: 0~4프렛의 개방 D) → 구간에 가장 가까운 자리
+    if (!opts.length && region) {
+      const any = collect(17, 0, false), dist = o => (o.f < region.lo ? region.lo - o.f : o.f > region.hi ? o.f - region.hi : 0);
+      const dmin = Math.min(...any.map(dist));
+      opts = any.filter(o => dist(o) === dmin);
+    }
     if (!opts.length) opts = collect(12, lastString);
     if (!opts.length) opts = collect(15, 0);
     if (!opts.length) return null;
